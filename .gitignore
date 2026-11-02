@@ -1,0 +1,23 @@
+# Dữ liệu vận hành và thông tin đăng nhập không được đưa lên Git.
+runtime/
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+*.pem
+*.key
+.appdeploy
+.vercel/
+
+# Môi trường và bằng chứng kiểm thử được sinh tại máy.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage*
+!.coveragerc
+htmlcov/
+coverage/
+.serena/
+*.log
