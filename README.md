@@ -335,3 +335,15 @@ Máy chủ khởi tạo lại có thể làm mất nhật ký và bản huấn l
 
 Trong bản clone không có bộ tài liệu gốc ở thư mục cha, test hash toàn bộ tài liệu là NOT RUN.
 Test hash dataset đóng gói vẫn bắt buộc chạy. Trên máy gốc, test bảo vệ đủ chín tệp vẫn chạy.
+
+
+### Bằng chứng đóng gói để xuất bản
+
+- Máy nguồn: chạy 132 / đạt 132 / lỗi 0 / NOT RUN 0; độ phủ 98,79%.
+- Bản xuất sạch: đạt 131 / lỗi 0 / NOT RUN 1; thiếu bộ đề bài gốc ngoài repo.
+- JavaScript: chạy 8 / đạt 8 / lỗi 0; độ phủ dòng 100%.
+- Giữ nguyên hash chín tệp gốc và manifest ở máy nguồn.
+- `.gitattributes` tắt đổi dòng cho manifest để bản Git giữ nguyên byte.
+- Không đưa runtime, dữ liệu nhật ký, mô hình đã học hoặc secrets lên repo.
+- Repo private đã được tạo và push. Chưa có bằng chứng deploy cloud thành công.
+- Deploy Community Cloud cần đăng nhập và cấp quyền đọc repo; không dùng dịch vụ trả phí.

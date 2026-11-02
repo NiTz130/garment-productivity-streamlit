@@ -5,3 +5,4 @@
 *.md text eol=lf
 *.toml text eol=lf
 *.xlsx binary
+source_hashes.json -text
