@@ -1,0 +1,179 @@
+<div class="app-root" id="garment-app">
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Năng suất chuyền may, trang dự báo" data-page-link="forecast">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false"><path d="M4 18.5h16M6 18V8.4l4.2-2.1 2.2 2.2 3.4-1.7 2.2 2.2V18M8.3 10.2h2.4m3.1-1.3 2.1 2.1m-7.5 2.4h2.4m3.1-2.2 2.1 2.1M4 5.2h5.4l1.5 1.5"/></svg>
+      </span>
+      <span class="brand-copy"><strong>Năng suất chuyền may</strong><small>Garment Line Analytics</small></span>
+    </a>
+    <nav class="main-nav" aria-label="Điều hướng chính">
+      <button class="nav-tab is-active" type="button" data-page="forecast" aria-current="page">Dự báo &amp; ra quyết định</button>
+      <button class="nav-tab" type="button" data-page="management">Thống kê quản trị</button>
+    </nav>
+  </header>
+
+  <main class="app-main">
+    <section class="page-view" id="forecast-page" aria-labelledby="forecast-title">
+      <div class="page-heading forecast-heading">
+        <div>
+          <p class="eyebrow">DỰ BÁO / THÔNG SỐ CA</p>
+          <h1 id="forecast-title">Dự báo &amp; ra quyết định</h1>
+        </div>
+        <p class="heading-note">Nhập thông số ca để xem năng suất dự báo và các hướng điều chỉnh.</p>
+      </div>
+
+      <div class="forecast-layout">
+        <section class="card input-card" aria-labelledby="input-title">
+          <div class="card-heading">
+            <div><h2 id="input-title">Thiết lập thông số ca</h2><p class="muted">Chọn mẫu hàng và nhập thông số sản xuất.</p></div>
+            <span class="heading-glyph" aria-hidden="true">≡</span>
+          </div>
+
+          <div class="field-group product-field">
+            <label for="product-search">Mẫu hàng</label>
+            <div class="combobox-wrap">
+              <input id="product-search" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="product-options" autocomplete="off" placeholder="Tìm theo SKU hoặc tên sản phẩm" aria-describedby="error-product">
+              <span class="select-chevron" aria-hidden="true">⌄</span>
+              <div class="combobox-options" id="product-options" role="listbox" hidden></div>
+            </div>
+            <p class="field-error" id="error-product" aria-live="polite"></p>
+          </div>
+
+          <div class="field-group">
+            <div class="label-line"><label for="smv-display">Định mức SMV chuẩn</label><span class="quiet-label">Từ danh mục dữ liệu</span></div>
+            <div class="readonly-input"><output id="smv-display">—</output><span>phút / sản phẩm</span></div>
+            <p class="field-help" id="smv-help" hidden>Mẫu hàng có nhiều SMV trong lịch sử; đang dùng giá trị đại diện backend trả về.</p>
+          </div>
+
+          <div class="field-group">
+            <label for="target-input">Mục tiêu năng suất</label>
+            <div class="input-with-unit"><input id="target-input" data-form-field="target" type="text" inputmode="decimal" autocomplete="off" placeholder="Ví dụ: 80" aria-describedby="error-target"><span>%</span></div>
+            <p class="field-error" id="error-target" aria-live="polite"></p>
+          </div>
+
+          <fieldset class="labor-box">
+            <legend>Nhân công</legend>
+            <label for="workers-input">Số người làm cả ca</label>
+            <div class="input-with-unit"><input id="workers-input" data-form-field="full_shift_workers" type="text" inputmode="numeric" autocomplete="off" placeholder="Số nguyên" aria-describedby="error-full_shift_workers"><span>người</span></div>
+            <p class="field-error" id="error-full_shift_workers" aria-live="polite"></p>
+            <label class="check-row" for="half-shift-input"><input id="half-shift-input" data-form-field="has_half_shift_worker" type="checkbox"><span>Thêm 1 người làm nửa ca</span></label>
+            <div class="labor-total"><span id="labor-summary">Nhập số người làm cả ca</span><strong id="labor-converted">Quy đổi: — lao động/ca</strong></div>
+          </fieldset>
+
+          <div class="paired-fields">
+            <div class="field-group">
+              <label for="overtime-input">Tổng tăng ca</label>
+              <div class="input-with-unit"><input id="overtime-input" data-form-field="overtime" type="text" inputmode="numeric" autocomplete="off" placeholder="0 hợp lệ" aria-describedby="error-overtime"><span>phút</span></div>
+              <p class="field-error" id="error-overtime" aria-live="polite"></p>
+            </div>
+            <div class="field-group">
+              <label for="idle-input">Máy dừng</label>
+              <div class="input-with-unit"><input id="idle-input" data-form-field="idle" type="text" inputmode="numeric" autocomplete="off" placeholder="0 hợp lệ" aria-describedby="error-idle"><span>phút</span></div>
+              <p class="field-error" id="error-idle" aria-live="polite"></p>
+            </div>
+          </div>
+
+          <div class="field-group bonus-field">
+            <label for="bonus-input">Tiền thưởng</label>
+            <div class="input-with-unit"><input id="bonus-input" data-form-field="bonus" type="text" inputmode="numeric" autocomplete="off" placeholder="VNĐ nguyên" aria-describedby="error-bonus"><span>VNĐ</span></div>
+            <p class="field-error" id="error-bonus" aria-live="polite"></p>
+          </div>
+          <p class="input-footnote">Các giá trị phải nằm trong giới hạn vận hành của dữ liệu nguồn.</p>
+        </section>
+
+        <div class="forecast-results">
+          <section class="card result-card" aria-labelledby="result-title">
+            <div class="card-heading result-heading">
+              <div><p class="eyebrow">KẾT QUẢ DỰ BÁO</p><h2 id="result-title">Năng suất ca</h2></div>
+              <span class="updated-at" id="updated-at" hidden></span>
+            </div>
+            <div class="result-content" id="result-content" aria-live="off">
+              <div class="empty-result" id="result-empty"><span class="empty-icon" aria-hidden="true">↗</span><div><strong>Chưa chọn sản phẩm</strong><p>Chọn mẫu hàng và nhập đủ thông số để xem dự báo.</p></div></div>
+              <div class="prediction-block" id="prediction-block" hidden>
+                <div class="prediction-main" aria-live="polite" aria-atomic="true">
+                  <div><div class="metric-caption">Năng suất dự báo</div><div class="prediction-value numeric" id="prediction-value">—</div></div>
+                  <div class="status-chip" id="prediction-status"></div>
+                </div>
+                <div class="prediction-details">
+                  <div><span>Mục tiêu ca</span><strong class="numeric" id="prediction-target">—</strong></div>
+                  <div><span>Chênh lệch mục tiêu</span><strong class="numeric" id="target-gap">—</strong></div>
+                </div>
+                <div class="trend-row" id="trend-row"><span>So với dự báo hợp lệ trước đó</span><strong class="numeric" id="prediction-trend">—</strong></div>
+                <div class="progress-section">
+                  <div class="progress-label"><span>Tiến độ năng suất dự kiến</span><strong class="numeric" id="progress-value">—</strong></div>
+                  <div class="progress-track" id="progress-track" role="img" aria-label="Tiến độ năng suất dự báo so với mục tiêu">
+                    <span class="progress-fill" id="progress-fill"></span><span class="target-marker" id="target-marker"></span>
+                  </div>
+                  <div class="progress-legend"><span>0%</span><span id="target-legend">Mục tiêu —</span><span>100%+</span></div>
+                </div>
+                <p class="prediction-note" id="prediction-note" hidden></p>
+              </div>
+              <div class="result-message" id="result-message" role="status" hidden></div>
+            </div>
+          </section>
+
+          <section class="card options-section" id="options-section" aria-labelledby="options-title">
+            <div class="card-heading options-heading">
+              <div><p class="eyebrow">HƯỚNG ĐIỀU CHỈNH</p><h2 id="options-title">Phương án gỡ vướng</h2><p class="muted" id="options-caption">Các hướng được tìm trong giới hạn backend cung cấp.</p></div>
+              <span class="options-icon" aria-hidden="true">⌁</span>
+            </div>
+            <div class="options-content" id="options-content" aria-live="off">
+              <p class="options-placeholder" id="options-placeholder">Phương án sẽ xuất hiện khi dự báo cho thấy ca chưa đạt mục tiêu.</p>
+              <div class="option-grid" id="option-grid" hidden></div>
+              <p class="options-message" id="options-message" hidden></p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-view" id="management-page" aria-labelledby="management-title" hidden>
+      <div class="page-heading management-heading">
+        <div><p class="eyebrow">QUẢN TRỊ / BÁO CÁO HIỆU SUẤT</p><h1 id="management-title">Thống kê quản trị</h1></div>
+        <p class="heading-note">Tổng hợp từ các bản ghi hợp lệ trong workbook nguồn.</p>
+      </div>
+
+      <section class="filter-bar" aria-label="Bộ lọc thống kê">
+        <label for="product-filter">Bộ lọc sản phẩm</label>
+        <select id="product-filter"><option value="">Tất cả sản phẩm</option></select>
+        <div class="filter-summary" id="filter-summary" aria-live="polite"><span class="summary-dot" aria-hidden="true"></span><span>Đang tải dữ liệu</span></div>
+      </section>
+      <p class="quality-note" id="quality-note" hidden></p>
+      <div class="dashboard-error" id="dashboard-error" role="status" hidden></div>
+
+      <section class="kpi-grid" aria-label="Chỉ số quản trị">
+        <article class="card kpi-card"><div class="kpi-label"><span>Tổng số ca</span><span class="kpi-icon" aria-hidden="true">▤</span></div><strong class="kpi-value numeric" id="kpi-shifts">0</strong><p class="kpi-foot" id="kpi-shifts-foot">Theo bộ lọc đang chọn</p></article>
+        <article class="card kpi-card"><div class="kpi-label"><span>Năng suất trung bình</span><span class="kpi-icon teal" aria-hidden="true">⌁</span></div><strong class="kpi-value numeric" id="kpi-actual">—</strong><p class="kpi-foot">Trung bình không trọng số theo bản ghi</p></article>
+        <article class="card kpi-card"><div class="kpi-label"><span>Tỷ lệ đạt mục tiêu</span><span class="kpi-icon green" aria-hidden="true">✓</span></div><strong class="kpi-value numeric" id="kpi-achievement">—</strong><p class="kpi-foot" id="kpi-achievement-foot">Tỷ lệ bản ghi có năng suất từ mục tiêu trở lên</p></article>
+        <article class="card kpi-card"><div class="kpi-label"><span>Tổng thời gian máy dừng</span><span class="kpi-icon red" aria-hidden="true">Ⅱ</span></div><strong class="kpi-value numeric" id="kpi-idle">—</strong><p class="kpi-foot">Tổng phút theo các bản ghi đã lọc</p></article>
+      </section>
+
+      <section class="charts-grid" aria-label="Biểu đồ thống kê">
+        <article class="card chart-card">
+          <div class="chart-heading"><div><h2>Mục tiêu và thực tế</h2><p class="muted" id="comparison-caption">So sánh trung bình theo sản phẩm</p></div><div class="legend"><span><i class="legend-swatch target-swatch"></i>Mục tiêu TB</span><span><i class="legend-swatch actual-swatch"></i>Thực tế TB</span></div></div>
+          <div class="chart-area" id="comparison-chart" role="group" aria-label="Biểu đồ cột năng suất mục tiêu và thực tế theo sản phẩm"></div>
+          <p class="chart-empty" id="comparison-empty" hidden>Không có dữ liệu sản phẩm trong bộ lọc này.</p>
+        </article>
+        <article class="card chart-card">
+          <div class="chart-heading"><div><h2>Tiền thưởng và năng suất</h2><p class="muted">Mỗi điểm là một ca; trục ngang là tiền thưởng VNĐ.</p></div><div class="legend"><span><i class="legend-dot achieved-dot"></i>Đạt mục tiêu</span><span><i class="legend-dot missed-dot"></i>Chưa đạt</span></div></div>
+          <div class="chart-area" id="bonus-chart" role="group" aria-label="Biểu đồ phân tán tiền thưởng và năng suất thực tế"></div>
+          <p class="chart-empty" id="bonus-empty" hidden>Không có điểm dữ liệu trong bộ lọc này.</p>
+          <p class="chart-footnote">Tiền thưởng theo ca; không đại diện cho tổng chi phí sản xuất.</p>
+        </article>
+      </section>
+
+      <section class="card history-card" aria-labelledby="history-title">
+        <div class="history-heading"><div><span class="table-icon" aria-hidden="true">▤</span><h2 id="history-title">Tra cứu dữ liệu ca sản xuất</h2><span class="muted">9 chỉ tiêu nghiệp vụ</span></div><span class="history-order">Thứ tự bản ghi nguồn</span></div>
+        <div class="table-scroll" tabindex="0" aria-label="Bảng dữ liệu ca sản xuất, có thể cuộn ngang trên màn hình nhỏ">
+          <table class="history-table">
+            <thead><tr><th scope="col">Mã SKU</th><th scope="col">Tên sản phẩm</th><th scope="col" class="numeric-cell">NS mục tiêu</th><th scope="col" class="numeric-cell">Định mức SMV</th><th scope="col" class="numeric-cell">Tăng ca</th><th scope="col" class="numeric-cell">Tiền thưởng</th><th scope="col" class="numeric-cell">Máy dừng</th><th scope="col" class="numeric-cell">Nhân công quy đổi</th><th scope="col" class="numeric-cell">NS thực tế</th></tr></thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+        <div class="table-empty" id="history-empty" hidden>Không có bản ghi hợp lệ cho bộ lọc này.</div>
+        <div class="pagination-row"><span id="page-summary">Hiển thị 0 bản ghi</span><nav class="pagination" aria-label="Phân trang lịch sử"><button type="button" id="page-prev" aria-label="Trang trước">‹ <span>Trước</span></button><span class="page-current" id="page-current">1</span><button type="button" id="page-next" aria-label="Trang tiếp theo"><span>Tiếp</span> ›</button></nav></div>
+      </section>
+    </section>
+  </main>
+  <div class="chart-tooltip" id="chart-tooltip" role="tooltip" hidden></div>
+</div>

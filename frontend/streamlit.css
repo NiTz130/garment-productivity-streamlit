@@ -1,0 +1,7 @@
+:root { color-scheme: light; }
+[data-testid="stAppViewContainer"] { background: #f8f9fa; }
+[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stStatusWidget"] { display: none !important; }
+[data-testid="stMainBlockContainer"] { max-width: none !important; padding: 0 !important; }
+[data-testid="stMarkdown"] { margin: 0 !important; }
+[data-testid="stVerticalBlock"] { gap: 0 !important; }
+iframe { border: 0 !important; }

@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"secondary":"#515f74","primary-container":"#0f766e","on-error-container":"#93000a","surface-container-low":"#f3f4f5","surface-container-lowest":"#ffffff","inverse-on-surface":"#f0f1f2","error":"#ba1a1a","tertiary-fixed-dim":"#ffb598","surface-container-highest":"#e1e3e4","secondary-container":"#d5e3fc","surface-container-high":"#e7e8e9","outline":"#6e7977","tertiary":"#7f4025","primary-fixed":"#9cf2e8","on-surface-variant":"#3e4947","primary-fixed-dim":"#80d5cb","primary":"#005c55","on-primary":"#ffffff","on-primary-container":"#a3faef","error-container":"#ffdad6","tertiary-fixed":"#ffdbce","on-secondary-fixed":"#0d1c2e","surface-container":"#edeeef","on-error":"#ffffff","on-primary-fixed":"#00201d","outline-variant":"#bdc9c6","on-secondary-fixed-variant":"#3a485b","secondary-fixed-dim":"#b9c7df","background":"#f8f9fa","on-tertiary-fixed-variant":"#72361b","on-tertiary-fixed":"#370e00","inverse-primary":"#80d5cb","tertiary-container":"#9c573a","on-secondary-container":"#57657a","surface":"#f8f9fa","on-background":"#191c1d","on-primary-fixed-variant":"#00504a","on-tertiary":"#ffffff","on-secondary":"#ffffff","surface-variant":"#e1e3e4","surface-dim":"#d9dadb","on-tertiary-container":"#ffe5db","surface-tint":"#006a63","on-surface":"#191c1d","inverse-surface":"#2e3132","secondary-fixed":"#d5e3fc","surface-bright":"#f8f9fa"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"space-xl":"1.5rem","gutter-compact":"0.5rem","space-md":"0.75rem","space-xs":"0.25rem","space-sm":"0.5rem","margin-mobile":"0.75rem","gutter":"1rem","margin":"1.5rem","space-lg":"1rem"},"fontFamily":{"label-md":["Be Vietnam Pro"],"numeric-table":["JetBrains Mono"],"body-lg":["Be Vietnam Pro"],"headline-md":["Be Vietnam Pro"],"headline-xl":["Be Vietnam Pro"],"headline-lg":["Be Vietnam Pro"],"body-sm":["Be Vietnam Pro"],"numeric-metric-lg":["JetBrains Mono"],"body-md":["Be Vietnam Pro"],"label-lg":["Be Vietnam Pro"],"headline-sm":["Be Vietnam Pro"],"numeric-metric-md":["JetBrains Mono"],"label-sm":["Be Vietnam Pro"]},"fontSize":{"label-md":["12px",{"lineHeight":"16px","fontWeight":"500"}],"numeric-table":["13px",{"lineHeight":"18px","fontWeight":"500"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"headline-xl":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"600"}],"body-sm":["12px",{"lineHeight":"16px","fontWeight":"400"}],"numeric-metric-lg":["30px",{"lineHeight":"36px","letterSpacing":"-0.03em","fontWeight":"700"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"label-lg":["14px",{"lineHeight":"20px","fontWeight":"500"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}],"numeric-metric-md":["20px",{"lineHeight":"24px","letterSpacing":"-0.02em","fontWeight":"600"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.02em","fontWeight":"600"}]}}}};</script></head><body class="bg-background font-body-md text-on-surface antialiased min-h-screen"><header class="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest border-b border-surface-container-high"><div class="w-full h-14 px-gutter flex items-center justify-between"><div class="flex items-center gap-gutter"><div class="flex items-center gap-space-sm select-none"><div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[20px]">precision_manufacturing</span></div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight leading-none">Năng suất chuyền may</span><span class="font-label-sm text-label-sm text-on-surface-variant leading-tight tracking-normal">Garment Line Analytics</span></div></div><div class="h-6 w-px bg-surface-container-highest hidden sm:block"></div><nav class="flex items-center h-14" data-active-classes="text-primary font-semibold border-b-2 border-primary bg-surface-container-low"><a class="h-14 px-gutter flex items-center text-on-surface-variant font-label-lg text-label-lg transition-colors hover:text-on-surface hover:bg-surface-container-low" data-path="du-bao-va-ra-quyet-dinh" href="#">Dự báo &amp; ra quyết định</a><a aria-current="page" class="h-14 px-gutter flex items-center transition-colors text-primary font-semibold border-b-2 border-primary bg-surface-container-low" data-path="thong-ke-quan-tri" href="#">Thống kê quản trị</a></nav></div><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs px-space-sm py-space-xs rounded-lg bg-surface-container-high border border-outline-variant text-on-surface-variant"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span><span class="font-label-sm text-label-sm tracking-wide">Nguyên mẫu thử nghiệm (Demo Prototype)</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-14 bg-background min-h-screen"><div class="flex flex-col w-full">
+<!-- Interactive Style Scaffolding -->
+<style>
+    .tabular-mono { font-variant-numeric: tabular-nums; }
+    .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; display: block; }
+    .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+<div class="w-full max-w-[1600px] mx-auto px-margin-mobile sm:px-gutter lg:px-margin py-space-lg flex flex-col gap-space-lg">
+<!-- HEADER & OPERATIONAL FILTER BAR -->
+<section class="flex flex-col gap-space-md">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+<div>
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider mb-0.5">
+<span>Quản trị xưởng may</span>
+<span>/</span>
+<span class="text-primary font-semibold">Báo cáo hiệu suất</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">Thống kê quản trị</h1>
+</div>
+<div class="flex items-center gap-space-sm text-on-surface-variant font-label-sm text-label-sm">
+<span class="inline-block w-2 h-2 rounded-full bg-primary-container"></span>
+<span>Hệ thống đồng bộ dữ liệu MES: <strong>1.197 ca</strong> hoàn tất</span>
+<span class="text-outline-variant">|</span>
+<span class="italic text-on-surface-variant/75">* Dữ liệu mẫu nguyên mẫu thử nghiệm</span>
+</div>
+</div>
+<!-- Integrated Filter Box -->
+<div class="bg-surface-container-lowest p-space-md rounded-lg shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-md">
+<div class="flex flex-wrap items-center gap-space-md">
+<div class="flex flex-col sm:flex-row sm:items-center gap-space-xs sm:gap-space-sm w-full sm:w-auto">
+<label class="font-label-md text-label-md text-on-surface-variant font-medium whitespace-nowrap" for="product-filter">
+              Bộ lọc sản phẩm:
+            </label>
+<div class="relative min-w-[280px]">
+<select class="w-full h-9 pl-3 pr-8 bg-surface-container-lowest font-body-md text-body-md text-on-surface rounded-lg shadow-sm focus:outline-none focus:bg-surface-container-low transition-colors appearance-none cursor-pointer" id="product-filter" onchange="applyFilter(this.value)">
+<option value="ALL">Tất cả sản phẩm (Toàn bộ 1.197 ca)</option>
+<option value="POLO">Áo Polo Cotton Pique (420 ca)</option>
+<option value="SHIRT">Sơ mi Nam Oxford (285 ca)</option>
+<option value="JACKET">Áo Jacket Windbreaker (162 ca)</option>
+<option value="KHAKI">Quần Khaki Chino Slim (140 ca)</option>
+<option value="TSHIRT">Áo T-shirt Combed 26S (118 ca)</option>
+<option value="DRESS">Đầm liền Linen Summer (72 ca)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-2 text-on-surface-variant pointer-events-none text-[20px]">
+                arrow_drop_down
+              </span>
+</div>
+</div>
+<!-- Status badge -->
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container text-on-surface-variant font-label-sm text-label-sm" id="filter-status-chip">
+<span class="material-symbols-outlined text-[16px] text-primary">query_stats</span>
+<span id="filter-caption">Đang phân tích: <strong>1.197 ca sản xuất</strong> (Toàn bộ lịch sử)</span>
+</div>
+<!-- Reset Filter Button (Hidden when ALL) -->
+<button class="hidden items-center gap-1 px-2.5 py-1 text-primary hover:text-on-primary hover:bg-primary font-label-sm text-label-sm rounded transition-all" id="btn-reset-filter" onclick="resetFilter()">
+<span class="material-symbols-outlined text-[16px]">clear_all</span>
+<span>Xóa bộ lọc</span>
+</button>
+</div>
+<div class="flex items-center gap-space-sm justify-end">
+<button class="h-9 px-3 rounded-lg bg-surface-container-low hover:bg-surface-container-high text-on-surface-variant font-label-md text-label-md flex items-center gap-1.5 transition-colors" onclick="window.print()">
+<span class="material-symbols-outlined text-[18px]">print</span>
+<span>In báo cáo</span>
+</button>
+<button class="h-9 px-3.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md flex items-center gap-1.5 transition-colors shadow-sm" onclick="exportCSV()">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span>Xuất dữ liệu (.CSV)</span>
+</button>
+</div>
+</div>
+</section>
+<!-- HÀNG 1 — BỐN KPI ĐỒNG BỘ -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between transition-all hover:shadow-md">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-md text-label-md text-secondary font-medium tracking-wide">Tổng số ca</span>
+<span class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[20px]">calendar_view_day</span>
+</span>
+</div>
+<div class="my-space-xs">
+<div class="font-numeric-metric-lg text-numeric-metric-lg text-on-surface tabular-mono leading-none tracking-tight" id="kpi-total-shifts">1.197</div>
+</div>
+<div class="pt-space-xs text-secondary font-body-sm text-body-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">history</span>
+<span id="kpi-total-desc">Phân tích toàn bộ dữ liệu lịch sử</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between transition-all hover:shadow-md">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-md text-label-md text-secondary font-medium tracking-wide">Năng suất trung bình</span>
+<span class="w-8 h-8 rounded-lg bg-secondary-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[20px]">speed</span>
+</span>
+</div>
+<div class="my-space-xs">
+<div class="font-numeric-metric-lg text-numeric-metric-lg text-primary tabular-mono leading-none tracking-tight" id="kpi-avg-efficiency">73,8%</div>
+</div>
+<div class="pt-space-xs text-secondary font-body-sm text-body-sm flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+<span>Trung bình gia quyền toàn chuyền</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between transition-all hover:shadow-md">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-md text-label-md text-secondary font-medium tracking-wide">Tỷ lệ đạt mục tiêu</span>
+<span class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">task_alt</span>
+</span>
+</div>
+<div class="my-space-xs">
+<div class="font-numeric-metric-lg text-numeric-metric-lg text-on-surface tabular-mono leading-none tracking-tight" id="kpi-target-rate">68,4%</div>
+</div>
+<div class="pt-space-xs text-secondary font-body-sm text-body-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">check_circle</span>
+<span id="kpi-target-desc">Đạt 819 / 1.197 ca sản xuất</span>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between transition-all hover:shadow-md">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-md text-label-md text-secondary font-medium tracking-wide">Tổng thời gian máy dừng</span>
+<span class="w-8 h-8 rounded-lg bg-error-container/40 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-[20px]">pause_circle</span>
+</span>
+</div>
+<div class="my-space-xs">
+<div class="font-numeric-metric-lg text-numeric-metric-lg text-error tabular-mono leading-none tracking-tight" id="kpi-downtime">31.420 <span class="font-body-md text-body-md text-secondary font-normal">phút</span></div>
+</div>
+<div class="pt-space-xs text-secondary font-body-sm text-body-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">engineering</span>
+<span id="kpi-downtime-desc">Tương đương 523,7 giờ bảo trì / chờ BTP</span>
+</div>
+</div>
+</section>
+<!-- HÀNG 2 — HAI BIỂU ĐỒ (MỤC TIÊU VS THỰC TẾ & TIỀN THƯỞNG VS HIỆU SUẤT) -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
+<!-- Biểu đồ 1: Cột đôi (Grouped Bar Chart) -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-space-sm gap-2">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Mục tiêu và thực tế</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">So sánh năng suất theo 6 nhóm dòng sản phẩm may mặc cốt lõi</p>
+</div>
+<!-- Chú giải -->
+<div class="flex items-center gap-space-md text-label-sm font-label-sm">
+<div class="flex items-center gap-1.5">
+<span class="w-3.5 h-3.5 rounded-sm bg-secondary opacity-75 inline-block"></span>
+<span class="text-on-surface-variant">Mục tiêu TB</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-3.5 h-3.5 rounded-sm bg-primary-container inline-block"></span>
+<span class="text-on-surface-variant">Thực tế TB</span>
+</div>
+</div>
+</div>
+<!-- SVG Grouped Bar Visualization -->
+<div class="relative w-full h-72 sm:h-80 pt-2 flex flex-col justify-end select-none">
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 540 260">
+<!-- Gridlines & Y-Axis markers -->
+<line stroke="#f1f5f9" stroke-width="1" x1="40" x2="530" y1="20" y2="20"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="32" y="24">100%</text>
+<line stroke="#f1f5f9" stroke-width="1" x1="40" x2="530" y1="75" y2="75"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="32" y="79">75%</text>
+<line stroke="#f1f5f9" stroke-width="1" x1="40" x2="530" y1="130" y2="130"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="32" y="134">50%</text>
+<line stroke="#f1f5f9" stroke-width="1" x1="40" x2="530" y1="185" y2="185"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="32" y="189">25%</text>
+<line stroke="#cbd5e1" stroke-width="1" x1="40" x2="530" y1="220" y2="220"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="32" y="223">0%</text>
+<!-- Group 1: Áo Polo (Target 75%, Actual 72%) -->
+<g class="cursor-pointer group" onmouseenter="showBarTooltip(event, 'Áo Polo', '420 ca', '75,0%', '72,0%')" onmouseleave="hideTooltip()">
+<rect class="transition-opacity hover:opacity-80" fill="#94a3b8" height="150" rx="2" width="22" x="58" y="70"></rect>
+<rect class="transition-opacity hover:opacity-85" fill="#0f766e" height="143.6" rx="2" width="22" x="83" y="76.4"></rect>
+<text fill="#475569" font-family="Be Vietnam Pro" font-size="11" font-weight="500" text-anchor="middle" x="81" y="238">Áo Polo</text>
+</g>
+<!-- Group 2: Sơ mi Nam (Target 80%, Actual 81%) -->
+<g class="cursor-pointer group" onmouseenter="showBarTooltip(event, 'Sơ mi Nam', '285 ca', '80,0%', '81,0%')" onmouseleave="hideTooltip()">
+<rect class="transition-opacity hover:opacity-80" fill="#94a3b8" height="160" rx="2" width="22" x="138" y="60"></rect>
+<rect class="transition-opacity hover:opacity-85" fill="#0f766e" height="162" rx="2" width="22" x="163" y="58"></rect>
+<text fill="#475569" font-family="Be Vietnam Pro" font-size="11" font-weight="500" text-anchor="middle" x="161" y="238">Sơ mi Nam</text>
+</g>
+<!-- Group 3: Áo Jacket (Target 70%, Actual 66%) -->
+<g class="cursor-pointer group" onmouseenter="showBarTooltip(event, 'Áo Jacket', '162 ca', '70,0%', '66,0%')" onmouseleave="hideTooltip()">
+<rect class="transition-opacity hover:opacity-80" fill="#94a3b8" height="140" rx="2" width="22" x="218" y="80"></rect>
+<rect class="transition-opacity hover:opacity-85" fill="#0f766e" height="132" rx="2" width="22" x="243" y="88"></rect>
+<text fill="#475569" font-family="Be Vietnam Pro" font-size="11" font-weight="500" text-anchor="middle" x="241" y="238">Áo Jacket</text>
+</g>
+<!-- Group 4: Quần Khaki (Target 78%, Actual 79%) -->
+<g class="cursor-pointer group" onmouseenter="showBarTooltip(event, 'Quần Khaki', '140 ca', '78,0%', '79,0%')" onmouseleave="hideTooltip()">
+<rect class="transition-opacity hover:opacity-80" fill="#94a3b8" height="156" rx="2" width="22" x="298" y="64"></rect>
+<rect class="transition-opacity hover:opacity-85" fill="#0f766e" height="158" rx="2" width="22" x="323" y="62"></rect>
+<text fill="#475569" font-family="Be Vietnam Pro" font-size="11" font-weight="500" text-anchor="middle" x="321" y="238">Quần Khaki</text>
+</g>
+<!-- Group 5: Áo T-shirt (Target 82%, Actual 84%) -->
+<g class="cursor-pointer group" onmouseenter="showBarTooltip(event, 'Áo T-shirt', '118 ca', '82,0%', '84,0%')" onmouseleave="hideTooltip()">
+<rect class="transition-opacity hover:opacity-80" fill="#94a3b8" height="164" rx="2" width="22" x="378" y="56"></rect>
+<rect class="transition-opacity hover:opacity-85" fill="#0f766e" height="168" rx="2" width="22" x="403" y="52"></rect>
+<text fill="#475569" font-family="Be Vietnam Pro" font-size="11" font-weight="500" text-anchor="middle" x="401" y="238">Áo T-shirt</text>
+</g>
+<!-- Group 6: Đầm liền (Target 75%, Actual 71%) -->
+<g class="cursor-pointer group" onmouseenter="showBarTooltip(event, 'Đầm liền', '72 ca', '75,0%', '71,0%')" onmouseleave="hideTooltip()">
+<rect class="transition-opacity hover:opacity-80" fill="#94a3b8" height="150" rx="2" width="22" x="458" y="70"></rect>
+<rect class="transition-opacity hover:opacity-85" fill="#0f766e" height="142" rx="2" width="22" x="483" y="78"></rect>
+<text fill="#475569" font-family="Be Vietnam Pro" font-size="11" font-weight="500" text-anchor="middle" x="481" y="238">Đầm liền</text>
+</g>
+</svg>
+</div>
+<div class="pt-2 text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Di chuột vào cột để xem chi tiết ca và tỷ lệ hoàn thành</span>
+</div>
+</div>
+<!-- Biểu đồ 2: Phân tán (Scatter Plot) -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-space-sm gap-2">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Tiền thưởng và năng suất</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Tương quan giữa mức thưởng ca (VNĐ) và Năng suất may thực tế (%)</p>
+</div>
+<!-- Legend Scatter -->
+<div class="flex items-center gap-space-md text-label-sm font-label-sm">
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-3 rounded-full bg-primary inline-block"></span>
+<span class="text-on-surface-variant">Đạt MT (≥ Mục tiêu)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-3 rounded-full bg-error inline-block"></span>
+<span class="text-on-surface-variant">Chưa đạt (&lt; Mục tiêu)</span>
+</div>
+</div>
+</div>
+<!-- SVG Scatter Plot Visualization -->
+<div class="relative w-full h-72 sm:h-80 pt-2 flex flex-col justify-end select-none">
+<svg class="w-full h-full overflow-visible" viewbox="0 0 540 260">
+<!-- Gridlines Y (40% -> 100%) -->
+<line stroke="#f1f5f9" stroke-width="1" x1="45" x2="520" y1="20" y2="20"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="38" y="24">100%</text>
+<line stroke="#f1f5f9" stroke-width="1" x1="45" x2="520" y1="70" y2="70"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="38" y="74">85%</text>
+<line stroke="#f1f5f9" stroke-width="1" x1="45" x2="520" y1="120" y2="120"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="38" y="124">70%</text>
+<line stroke="#f1f5f9" stroke-width="1" x1="45" x2="520" y1="170" y2="170"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="38" y="174">55%</text>
+<line stroke="#cbd5e1" stroke-width="1" x1="45" x2="520" y1="220" y2="220"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="38" y="223">40%</text>
+<!-- Gridlines X (0 -> 2.000.000 VNĐ) -->
+<line stroke="#cbd5e1" stroke-width="1" x1="45" x2="45" y1="20" y2="220"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="middle" x="45" y="238">0</text>
+<line stroke="#f1f5f9" stroke-width="1" x1="163" x2="163" y1="20" y2="220"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="middle" x="163" y="238">500k</text>
+<line stroke="#f1f5f9" stroke-width="1" x1="282" x2="282" y1="20" y2="220"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="middle" x="282" y="238">1.000k</text>
+<line stroke="#f1f5f9" stroke-width="1" x1="401" x2="401" y1="20" y2="220"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="middle" x="401" y="238">1.500k</text>
+<line stroke="#f1f5f9" stroke-width="1" x1="520" x2="520" y1="20" y2="220"></line>
+<text fill="#94a3b8" font-family="JetBrains Mono" font-size="10" text-anchor="middle" x="520" y="238">2.000k</text>
+<!-- Scatter Data Points (Samples across density) -->
+<!-- Hit Target Points (Green / Teal #005c55) -->
+<circle class="cursor-pointer hover:r-7 transition-all" cx="187" cy="80" fill="#005c55" onmouseenter="showScatterTooltip(event, 'SKU-POLO-802', '600.000 VNĐ', '82,5%', '80,0%', true)" onmouseleave="hideTooltip()" opacity="0.85" r="5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="210" cy="74" fill="#005c55" onmouseenter="showScatterTooltip(event, 'SKU-POLO-805', '700.000 VNĐ', '84,0%', '80,0%', true)" onmouseleave="hideTooltip()" opacity="0.8" r="5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="282" cy="55" fill="#005c55" onmouseenter="showScatterTooltip(event, 'SKU-SMI-412', '1.000.000 VNĐ', '89,5%', '82,0%', true)" onmouseleave="hideTooltip()" opacity="0.9" r="5.5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="340" cy="48" fill="#005c55" onmouseenter="showScatterTooltip(event, 'SKU-TSH-109', '1.250.000 VNĐ', '91,2%', '85,0%', true)" onmouseleave="hideTooltip()" opacity="0.85" r="5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="140" cy="88" fill="#005c55" onmouseenter="showScatterTooltip(event, 'SKU-KHA-331', '400.000 VNĐ', '79,5%', '78,0%', true)" onmouseleave="hideTooltip()" opacity="0.75" r="4.5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="245" cy="65" fill="#005c55" onmouseenter="showScatterTooltip(event, 'SKU-SMI-419', '850.000 VNĐ', '86,8%', '82,0%', true)" onmouseleave="hideTooltip()" opacity="0.8" r="5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="460" cy="35" fill="#005c55" onmouseenter="showScatterTooltip(event, 'SKU-TSH-115', '1.750.000 VNĐ', '95,4%', '88,0%', true)" onmouseleave="hideTooltip()" opacity="0.9" r="5.5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="390" cy="50" fill="#005c55" onmouseenter="showScatterTooltip(event, 'SKU-POLO-822', '1.450.000 VNĐ', '90,0%', '82,0%', true)" onmouseleave="hideTooltip()" opacity="0.85" r="5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="163" cy="95" fill="#005c55" onmouseenter="showScatterTooltip(event, 'SKU-DRS-901', '500.000 VNĐ', '77,2%', '75,0%', true)" onmouseleave="hideTooltip()" opacity="0.8" r="4.5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="305" cy="62" fill="#005c55" onmouseenter="showScatterTooltip(event, 'SKU-JCK-201', '1.100.000 VNĐ', '87,3%', '75,0%', true)" onmouseleave="hideTooltip()" opacity="0.85" r="5"></circle>
+<!-- Missed Target Points (Red / Orange #ba1a1a) -->
+<circle class="cursor-pointer hover:r-7 transition-all" cx="95" cy="140" fill="#ba1a1a" onmouseenter="showScatterTooltip(event, 'SKU-JCK-204', '200.000 VNĐ', '64,2%', '72,0%', false)" onmouseleave="hideTooltip()" opacity="0.85" r="5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="68" cy="180" fill="#ba1a1a" onmouseenter="showScatterTooltip(event, 'SKU-POLO-790', '100.000 VNĐ', '52,0%', '75,0%', false)" onmouseleave="hideTooltip()" opacity="0.85" r="5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="116" cy="155" fill="#ba1a1a" onmouseenter="showScatterTooltip(event, 'SKU-DRS-892', '300.000 VNĐ', '60,5%', '75,0%', false)" onmouseleave="hideTooltip()" opacity="0.8" r="4.5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="187" cy="128" fill="#ba1a1a" onmouseenter="showScatterTooltip(event, 'SKU-SMI-388', '600.000 VNĐ', '67,8%', '80,0%', false)" onmouseleave="hideTooltip()" opacity="0.85" r="5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="235" cy="115" fill="#ba1a1a" onmouseenter="showScatterTooltip(event, 'SKU-KHA-310', '800.000 VNĐ', '71,4%', '78,0%', false)" onmouseleave="hideTooltip()" opacity="0.8" r="5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="140" cy="135" fill="#ba1a1a" onmouseenter="showScatterTooltip(event, 'SKU-JCK-199', '400.000 VNĐ', '65,5%', '70,0%', false)" onmouseleave="hideTooltip()" opacity="0.85" r="4.5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="82" cy="195" fill="#ba1a1a" onmouseenter="showScatterTooltip(event, 'SKU-POLO-771', '150.000 VNĐ', '47,5%', '75,0%', false)" onmouseleave="hideTooltip()" opacity="0.8" r="5"></circle>
+<circle class="cursor-pointer hover:r-7 transition-all" cx="210" cy="120" fill="#ba1a1a" onmouseenter="showScatterTooltip(event, 'SKU-DRS-880', '700.000 VNĐ', '70,1%', '75,0%', false)" onmouseleave="hideTooltip()" opacity="0.8" r="5"></circle>
+</svg>
+</div>
+<div class="pt-2 text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant italic">
+            Ghi chú: Phân bố tiền thưởng theo ca; không phản ánh tổng chi phí sản xuất toàn chuyền.
+          </span>
+</div>
+</div>
+</section>
+<!-- HÀNG 3 — TRA CỨU LỊCH SỬ SẢN XUẤT (BẢNG 9 TRƯỜNG CHUẨN NGHIỆP VỤ) -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm flex flex-col overflow-hidden">
+<!-- Toolbar bảng -->
+<div class="p-space-md bg-surface-container-lowest flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">table_rows</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Tra cứu dữ liệu ca sản xuất</h2>
+<span class="text-on-surface-variant font-label-sm text-label-sm ml-1">(Đầy đủ 9 chỉ tiêu nghiệp vụ dệt may)</span>
+</div>
+<div class="flex items-center gap-space-sm text-body-sm text-body-sm text-on-surface-variant">
+<span>Sắp xếp: <strong>Mặc định (Thời gian)</strong></span>
+</div>
+</div>
+<!-- Container cuộn ngang cho bảng -->
+<div class="custom-scroll overflow-x-auto w-full">
+<table class="w-full min-w-[1100px] border-collapse text-left">
+<!-- Header cố định -->
+<thead class="sticky top-0 bg-[#f8fafc] z-10 select-none">
+<tr class="h-10 text-on-surface-variant font-label-sm text-label-sm tracking-wide uppercase">
+<th class="py-2.5 px-4 font-semibold text-left w-36">1. Mã SKU</th>
+<th class="py-2.5 px-4 font-semibold text-left min-w-[200px]">2. Tên sản phẩm</th>
+<th class="py-2.5 px-4 font-semibold text-right w-36">3. NS Mục tiêu</th>
+<th class="py-2.5 px-4 font-semibold text-right w-32">4. Định mức SMV</th>
+<th class="py-2.5 px-4 font-semibold text-right w-32">5. Tăng ca</th>
+<th class="py-2.5 px-4 font-semibold text-right w-36">6. Tiền thưởng</th>
+<th class="py-2.5 px-4 font-semibold text-right w-32">7. Máy dừng</th>
+<th class="py-2.5 px-4 font-semibold text-right w-36">8. NC Quy đổi</th>
+<th class="py-2.5 px-4 font-semibold text-right w-44">9. NS Thực tế</th>
+</tr>
+</thead>
+<!-- Data Body -->
+<tbody class="divide-y divide-surface-container font-body-md text-body-md text-on-surface" id="table-body">
+<!-- Row 1 -->
+<tr class="h-11 hover:bg-surface-container-low transition-colors group">
+<td class="py-2 px-4 font-numeric-table text-numeric-table font-semibold text-on-surface">SKU-POLO-802</td>
+<td class="py-2 px-4 font-medium">Áo Polo Cotton Pique</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">80,0%</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">18,5 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">120 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right font-medium text-on-surface">600.000 ₫</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-error font-medium">25 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">30,5</td>
+<td class="py-2 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 font-numeric-table text-numeric-table font-bold text-primary">
+                  82,4%
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-sans font-medium bg-[#f0fdf4] text-[#15803d]">Đạt</span>
+</span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="h-11 hover:bg-surface-container-low transition-colors group">
+<td class="py-2 px-4 font-numeric-table text-numeric-table font-semibold text-on-surface">SKU-SMI-412</td>
+<td class="py-2 px-4 font-medium">Sơ mi Nam Oxford Regular</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">82,0%</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">22,0 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">60 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right font-medium text-on-surface">1.000.000 ₫</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">12 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">32,0</td>
+<td class="py-2 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 font-numeric-table text-numeric-table font-bold text-primary">
+                  89,5%
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-sans font-medium bg-[#f0fdf4] text-[#15803d]">Đạt</span>
+</span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="h-11 hover:bg-surface-container-low transition-colors group">
+<td class="py-2 px-4 font-numeric-table text-numeric-table font-semibold text-on-surface">SKU-JCK-204</td>
+<td class="py-2 px-4 font-medium">Áo Jacket Windbreaker 2 Lớp</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">72,0%</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">31,2 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">0 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right font-medium text-on-surface">200.000 ₫</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-error font-medium">68 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">28,0</td>
+<td class="py-2 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 font-numeric-table text-numeric-table font-bold text-error">
+                  64,2%
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-sans font-medium bg-[#fef2f2] text-[#b91c1c]">Chưa đạt</span>
+</span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="h-11 hover:bg-surface-container-low transition-colors group">
+<td class="py-2 px-4 font-numeric-table text-numeric-table font-semibold text-on-surface">SKU-KHA-331</td>
+<td class="py-2 px-4 font-medium">Quần Khaki Chino Slimfit</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">78,0%</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">24,5 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">90 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right font-medium text-on-surface">400.000 ₫</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">18 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">31,5</td>
+<td class="py-2 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 font-numeric-table text-numeric-table font-bold text-primary">
+                  79,5%
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-sans font-medium bg-[#f0fdf4] text-[#15803d]">Đạt</span>
+</span>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="h-11 hover:bg-surface-container-low transition-colors group">
+<td class="py-2 px-4 font-numeric-table text-numeric-table font-semibold text-on-surface">SKU-TSH-109</td>
+<td class="py-2 px-4 font-medium">Áo T-shirt Combed 26S Basic</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">85,0%</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">11,0 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">150 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right font-medium text-on-surface">1.250.000 ₫</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">10 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">35,0</td>
+<td class="py-2 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 font-numeric-table text-numeric-table font-bold text-primary">
+                  91,2%
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-sans font-medium bg-[#f0fdf4] text-[#15803d]">Đạt</span>
+</span>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="h-11 hover:bg-surface-container-low transition-colors group">
+<td class="py-2 px-4 font-numeric-table text-numeric-table font-semibold text-on-surface">SKU-DRS-892</td>
+<td class="py-2 px-4 font-medium">Đầm liền Linen Summer Flare</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">75,0%</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">26,0 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">30 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right font-medium text-on-surface">300.000 ₫</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-error font-medium">42 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">27,0</td>
+<td class="py-2 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 font-numeric-table text-numeric-table font-bold text-error">
+                  60,5%
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-sans font-medium bg-[#fef2f2] text-[#b91c1c]">Chưa đạt</span>
+</span>
+</td>
+</tr>
+<!-- Row 7 -->
+<tr class="h-11 hover:bg-surface-container-low transition-colors group">
+<td class="py-2 px-4 font-numeric-table text-numeric-table font-semibold text-on-surface">SKU-POLO-805</td>
+<td class="py-2 px-4 font-medium">Áo Polo Cotton Bo Dệt Kim</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">80,0%</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">19,0 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">60 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right font-medium text-on-surface">700.000 ₫</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">15 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">29,5</td>
+<td class="py-2 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 font-numeric-table text-numeric-table font-bold text-primary">
+                  84,0%
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-sans font-medium bg-[#f0fdf4] text-[#15803d]">Đạt</span>
+</span>
+</td>
+</tr>
+<!-- Row 8 -->
+<tr class="h-11 hover:bg-surface-container-low transition-colors group">
+<td class="py-2 px-4 font-numeric-table text-numeric-table font-semibold text-on-surface">SKU-SMI-388</td>
+<td class="py-2 px-4 font-medium">Sơ mi Nam Tay Ngắn Casual</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">80,0%</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">20,2 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">0 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right font-medium text-on-surface">600.000 ₫</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-error font-medium">35 ph</td>
+<td class="py-2 px-4 font-numeric-table text-numeric-table text-right text-secondary">30,0</td>
+<td class="py-2 px-4 text-right">
+<span class="inline-flex items-center gap-1.5 font-numeric-table text-numeric-table font-bold text-error">
+                  67,8%
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-sans font-medium bg-[#fef2f2] text-[#b91c1c]">Chưa đạt</span>
+</span>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Empty State Container (Hidden by default) -->
+<div class="hidden flex-col items-center justify-center p-12 text-center" id="table-empty-state">
+<div class="w-14 h-14 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant mb-space-sm">
+<span class="material-symbols-outlined text-[32px]">folder_off</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm font-semibold text-on-surface mb-1">Không có ca sản xuất nào phù hợp với bộ lọc</h3>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-md">Vui lòng chọn mã sản phẩm khác hoặc xóa bộ lọc để xem toàn bộ dữ liệu lịch sử vận hành chuyền may.</p>
+<button class="mt-space-md h-9 px-4 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md rounded-lg transition-colors" onclick="resetFilter()">
+            Khôi phục bộ lọc mặc định
+          </button>
+</div>
+</div>
+<!-- Pagination Footbar -->
+<div class="px-space-md py-space-sm bg-[#f8fafc] flex flex-col sm:flex-row items-center justify-between gap-space-sm select-none">
+<div class="font-body-sm text-body-sm text-on-surface-variant">
+<span id="page-summary">Hiển thị <strong>1 - 8</strong> trong tổng số <strong>1.197 ca</strong></span>
+</div>
+<div class="flex items-center gap-1 font-label-md text-label-md">
+<button class="h-8 px-2.5 rounded bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high flex items-center justify-center disabled:opacity-40 transition-colors" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+<span class="hidden sm:inline ml-1">Trước</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary text-on-primary font-semibold flex items-center justify-center">1</button>
+<button class="w-8 h-8 rounded bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high flex items-center justify-center transition-colors">2</button>
+<button class="w-8 h-8 rounded bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high flex items-center justify-center transition-colors">3</button>
+<span class="w-6 text-center text-on-surface-variant">...</span>
+<button class="w-8 h-8 rounded bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high flex items-center justify-center transition-colors">120</button>
+<button class="h-8 px-2.5 rounded bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high flex items-center justify-center transition-colors">
+<span class="hidden sm:inline mr-1">Tiếp</span>
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+<!-- FLOATING TOOLTIP FOR CHARTS -->
+<div class="fixed pointer-events-none hidden z-50 bg-surface-container-lowest/95 backdrop-blur-sm p-3 rounded-lg shadow-xl text-left border-l-4 border-primary max-w-xs transition-opacity duration-75" id="chart-tooltip">
+<!-- Populated by JS -->
+</div>
+<!-- INLINE BUSINESS LOGIC & INTERACTION SCRIPT -->
+<script>
+    const tooltip = document.getElementById('chart-tooltip');
+
+    function showBarTooltip(e, name, shifts, target, actual) {
+      tooltip.innerHTML = `
+        <div class="font-headline-sm text-[13px] font-bold text-on-surface mb-1">${name}</div>
+        <div class="font-body-sm text-[11px] text-on-surface-variant mb-1.5">Số ca thực tế: <strong class="text-on-surface">${shifts}</strong></div>
+        <div class="flex items-center justify-between gap-4 font-numeric-table text-[11px] py-0.5">
+          <span class="text-secondary">Mục tiêu TB:</span>
+          <span class="font-bold text-on-surface">${target}</span>
+        </div>
+        <div class="flex items-center justify-between gap-4 font-numeric-table text-[11px] py-0.5">
+          <span class="text-primary-container">Thực tế TB:</span>
+          <span class="font-bold text-primary">${actual}</span>
+        </div>
+      `;
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top = (e.clientY + 14) + 'px';
+      tooltip.classList.remove('hidden');
+    }
+
+    function showScatterTooltip(e, sku, bonus, efficiency, target, achieved) {
+      const statusHtml = achieved
+        ? '<span class="text-[#15803d] font-bold">Đạt mục tiêu</span>'
+        : '<span class="text-[#b91c1c] font-bold">Chưa đạt mục tiêu</span>';
+
+      tooltip.innerHTML = `
+        <div class="font-numeric-table text-[12px] font-bold text-on-surface mb-0.5">${sku}</div>
+        <div class="text-[11px] mb-1.5">${statusHtml} (MT: ${target})</div>
+        <div class="flex items-center justify-between gap-4 font-numeric-table text-[11px] py-0.5">
+          <span class="text-secondary">Tiền thưởng:</span>
+          <span class="font-bold text-on-surface">${bonus}</span>
+        </div>
+        <div class="flex items-center justify-between gap-4 font-numeric-table text-[11px] py-0.5">
+          <span class="text-secondary">Năng suất:</span>
+          <span class="font-bold ${achieved ? 'text-primary' : 'text-error'}">${efficiency}</span>
+        </div>
+      `;
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top = (e.clientY + 14) + 'px';
+      tooltip.classList.remove('hidden');
+    }
+
+    function hideTooltip() {
+      tooltip.classList.add('hidden');
+    }
+
+    // Filter Simulation based on Product Selection
+    function applyFilter(val) {
+      const resetBtn = document.getElementById('btn-reset-filter');
+      const caption = document.getElementById('filter-caption');
+      const kpiTotal = document.getElementById('kpi-total-shifts');
+      const kpiTotalDesc = document.getElementById('kpi-total-desc');
+      const kpiAvg = document.getElementById('kpi-avg-efficiency');
+      const kpiRate = document.getElementById('kpi-target-rate');
+      const kpiRateDesc = document.getElementById('kpi-target-desc');
+      const kpiDown = document.getElementById('kpi-downtime');
+      const kpiDownDesc = document.getElementById('kpi-downtime-desc');
+      const pageSummary = document.getElementById('page-summary');
+
+      if (val === 'ALL') {
+        resetBtn.classList.add('hidden');
+        resetBtn.classList.remove('inline-flex');
+        caption.innerHTML = 'Đang phân tích: <strong>1.197 ca sản xuất</strong> (Toàn bộ lịch sử)';
+        kpiTotal.innerText = '1.197';
+        kpiTotalDesc.innerText = 'Phân tích toàn bộ dữ liệu lịch sử';
+        kpiAvg.innerText = '73,8%';
+        kpiRate.innerText = '68,4%';
+        kpiRateDesc.innerText = 'Đạt 819 / 1.197 ca sản xuất';
+        kpiDown.innerHTML = '31.420 <span class="font-body-md text-body-md text-secondary font-normal">phút</span>';
+        kpiDownDesc.innerText = 'Tương đương 523,7 giờ bảo trì / chờ BTP';
+        pageSummary.innerHTML = 'Hiển thị <strong>1 - 8</strong> trong tổng số <strong>1.197 ca</strong>';
+      } else {
+        resetBtn.classList.remove('hidden');
+        resetBtn.classList.add('inline-flex');
+
+        if (val === 'POLO') {
+          caption.innerHTML = 'Đang phân tích: <strong>420 ca</strong> Áo Polo Cotton Pique';
+          kpiTotal.innerText = '420';
+          kpiTotalDesc.innerText = '35,1% tổng sản lượng xưởng';
+          kpiAvg.innerText = '72,0%';
+          kpiRate.innerText = '65,2%';
+          kpiRateDesc.innerText = 'Đạt 274 / 420 ca';
+          kpiDown.innerHTML = '11.850 <span class="font-body-md text-body-md text-secondary font-normal">phút</span>';
+          kpiDownDesc.innerText = 'Tương đương 197,5 giờ bảo trì';
+          pageSummary.innerHTML = 'Hiển thị <strong>1 - 8</strong> trong tổng số <strong>420 ca</strong>';
+        } else if (val === 'SHIRT') {
+          caption.innerHTML = 'Đang phân tích: <strong>285 ca</strong> Sơ mi Nam Oxford';
+          kpiTotal.innerText = '285';
+          kpiTotalDesc.innerText = '23,8% tổng sản lượng xưởng';
+          kpiAvg.innerText = '81,0%';
+          kpiRate.innerText = '78,6%';
+          kpiRateDesc.innerText = 'Đạt 224 / 285 ca';
+          kpiDown.innerHTML = '6.420 <span class="font-body-md text-body-md text-secondary font-normal">phút</span>';
+          kpiDownDesc.innerText = 'Tương đương 107 giờ bảo trì';
+          pageSummary.innerHTML = 'Hiển thị <strong>1 - 8</strong> trong tổng số <strong>285 ca</strong>';
+        } else {
+          caption.innerHTML = `Đang phân tích: <strong>Nhóm SKU chọn lọc</strong>`;
+          kpiTotal.innerText = '162';
+          kpiTotalDesc.innerText = 'Nhóm mã hàng kỹ thuật phức tạp';
+          kpiAvg.innerText = '66,0%';
+          kpiRate.innerText = '58,0%';
+          kpiRateDesc.innerText = 'Đạt 94 / 162 ca';
+          kpiDown.innerHTML = '5.920 <span class="font-body-md text-body-md text-secondary font-normal">phút</span>';
+          kpiDownDesc.innerText = 'Tương đương 98,6 giờ bảo trì';
+          pageSummary.innerHTML = 'Hiển thị <strong>1 - 8</strong> trong tổng số <strong>162 ca</strong>';
+        }
+      }
+    }
+
+    function resetFilter() {
+      const select = document.getElementById('product-filter');
+      select.value = 'ALL';
+      applyFilter('ALL');
+    }
+
+    function exportCSV() {
+      const csvContent = "data:text/csv;charset=utf-8,SKU,TenSanPham,NSMucTieu,DinhMucSMV,TangCa,TienThuong,MayDung,NCQuyDoi,NSThucTe,TrangThai\\n"
+        + "SKU-POLO-802,Ao Polo Cotton Pique,80.0%,18.5,120,600000,25,30.5,82.4%,Dat\\n"
+        + "SKU-SMI-412,So mi Nam Oxford Regular,82.0%,22.0,60,1000000,12,32.0,89.5%,Dat\\n"
+        + "SKU-JCK-204,Ao Jacket Windbreaker 2 Lop,72.0%,31.2,0,200000,68,28.0,64.2%,Chua Dat\\n"
+        + "SKU-KHA-331,Quan Khaki Chino Slimfit,78.0%,24.5,90,400000,18,31.5,79.5%,Dat\\n"
+        + "SKU-TSH-109,Ao T-shirt Combed 26S Basic,85.0%,11.0,150,1250000,10,35.0,91.2%,Dat\\n"
+        + "SKU-DRS-892,Dam lien Linen Summer Flare,75.0%,26.0,30,300000,42,27.0,60.5%,Chua Dat";
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "bao_cao_nang_suat_chuyen_may_1197ca.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</div></main></body></html>

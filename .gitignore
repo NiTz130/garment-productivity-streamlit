@@ -15,9 +15,15 @@ venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.pytest-tmp/
 .coverage*
 !.coveragerc
 htmlcov/
 coverage/
 .serena/
 *.log
+
+# Local tools, generated browser evidence, and Excel owner files.
+.tmp/
+artifacts/
+~$*.xlsx

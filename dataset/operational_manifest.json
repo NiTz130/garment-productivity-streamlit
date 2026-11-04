@@ -1,0 +1,8 @@
+{
+  "source_manifest": "../source_hashes.json",
+  "original_source_sha256": "27a73111854ce55870811bbd12c49733576fec57b240c98c585aef356446466c",
+  "operational_dataset_sha256": "ace6233930cc623fe5abb20d0747fad068b6ae931480df2fe2f507fb73337bcd",
+  "bonus_header": "Tiền thưởng năng suất (VNĐ)",
+  "bonus_unit": "VND",
+  "conversion_applied_by_backend": false
+}

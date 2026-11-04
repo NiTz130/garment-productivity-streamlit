@@ -1,349 +1,115 @@
-> Bản demo môn học. Nhật ký và mô hình huấn luyện lại trên host miễn phí có thể mất khi máy chủ khởi tạo lại. Chỉ nhập dữ liệu minh họa.
+# Năng suất chuyền may
 
-# Hệ thống dự báo năng suất chuyền may
+Ứng dụng dùng Streamlit làm giao diện và gọi facade Python `services.py` trực tiếp. Không có HTTP API, CORS hay backend server riêng. Trang được dựng bằng component hai chiều `st.components.v2` có trong Streamlit 1.66.1.
 
-Tài liệu dành cho Giám đốc sản xuất, Trưởng xưởng và Trưởng chuyền.
-Dùng ứng dụng để dự báo đầu ca, so sánh phương án và ghi nhận kết quả cuối ca.
-
-## Chạy ứng dụng
-
-Mở PowerShell và chạy:
+## Cài đặt và kiểm thử
 
 ```powershell
-cd C:\codev2\chieut4\garment_app
+Set-Location D:\garment-productivity-streamlit
 python -m pip install -r requirements.txt
+python -X utf8 -c "from data import load_data; import model; bundle = model.train(load_data()); model.activate(bundle); print(bundle['selected_model'])"
 python -m streamlit run app.py --server.address 127.0.0.1
 ```
 
-Mở địa chỉ mà Streamlit hiển thị, thường là `http://127.0.0.1:8501`.
-Các thư viện đã được cài trên máy hiện tại. Cài gói trên máy mới cần mạng.
-Ứng dụng không gọi dịch vụ dự báo bên ngoài. Đã tắt thống kê sử dụng Streamlit.
-Chỉ lắng nghe địa chỉ nội bộ khi dùng lệnh trên.
+Mở `http://127.0.0.1:8501`. Component dùng CSS, HTML và JavaScript cục bộ trong `frontend/`; không cần lệnh build, Node runtime, Tailwind CDN hay Google Fonts để chạy.
 
-Repo đã kèm bản sao dataset trong `dataset/`. Khi có tệp gốc ở thư mục cha, ứng dụng ưu tiên tệp đó.
-Ứng dụng đọc sheet đầu tiên bằng pandas và openpyxl, không sửa tệp nguồn.
+Lệnh huấn luyện chỉ cần chạy khi cài mới hoặc thay dataset. Git không lưu thư mục `runtime/`; một bản clone mới cần tạo model VNĐ trước khi dự báo. Trang thống kê vẫn đọc được lịch sử khi chưa có model.
 
-## Dùng bốn bước
+Frontend có hai trang theo bản thiết kế Stitch trong `docs/`: dự báo tự động sau 300 ms dừng gõ, và thống kê quản trị với bộ lọc sản phẩm, biểu đồ, bảng chín trường. Nhân công nhập người cả ca cùng lựa chọn thêm một người nửa ca. Khi chưa đạt mục tiêu, hệ thống so sánh ba hướng điều chỉnh; hướng kết hợp cho phép giữ nguyên một thông số đã chạm trần và thay đổi ít nhất hai thông số còn lại.
 
-1. **Thiết lập đầu ca:** chọn sản phẩm và nhập thông số. Máy dừng mặc định 0 phút.
-2. **Dự báo và cảnh báo:** bấm **Dự báo năng suất**. Đèn xanh nghĩa là dự báo đạt mục tiêu.
-3. **Mô phỏng kịch bản:** kéo thanh trượt. Bảng năm phương án cập nhật ngay.
-4. **Cuối ca và MLOps:** nhập số liệu thực tế, tên tổ và ngày ca rồi bấm **Lưu nhật ký**.
+```powershell
+python -X utf8 -m pytest -q --basetemp=.tmp/pytest-final
+```
 
-Năng suất dùng tỷ lệ: nhập `0.8` để biểu thị 80%.
-Chênh lệch trên bước 2 dùng điểm phần trăm.
-Số phút tăng ca là tổng của cả tổ, không phải số phút mỗi công nhân.
-Số công nhân có thể là số thập phân vì dữ liệu gốc dùng lao động quy đổi.
-Tên tổ chỉ dùng để ghi nhật ký và lọc lịch sử, không đưa vào mô hình.
-Số liệu cuối ca được nhập riêng; không tự sao chép kế hoạch thành thực tế.
-Mỗi lần bấm lưu tạo một bản ghi mới. Không bấm lại cho cùng một ca đã lưu.
+Coverage backend giữ ngưỡng tối thiểu 90%. Workbook nguồn được đọc ở sheet đầu tiên và không bị ghi lại. SQLite không được dùng. Dataset mặc định ở `dataset/`; một file cùng tên trong thư mục cha được ưu tiên nếu có.
 
-Bước 1 chấp nhận miền vận hành đầy đủ trong `config.RANGES`.
-What-If chỉ chạy nếu đầu ca cũng nằm trong giới hạn các thanh trượt.
-Nếu đầu ca vượt giới hạn What-If, bước 2 vẫn dự báo được.
+Lần kiểm tra tích hợp gần nhất: **113 passed, 1 skipped**, coverage backend **95,17%**. Hai trang đã được kiểm tra trên Edge headless bằng dữ liệu thật: dự báo tự cập nhật, ba hướng điều chỉnh, lọc lịch sử và bố cục mobile 390 px. Test bị bỏ qua cần bộ tài liệu nguồn ngoài repo.
 
-## Hiểu kết quả
+## Dùng facade từ frontend
 
-Mô hình là `sklearn.linear_model.LinearRegression`, dùng sáu biến đã yêu cầu.
-Chia dữ liệu gốc thành 80% học và 20% kiểm tra, `random_state=42`.
-Lần đầu mở ứng dụng sẽ huấn luyện và lưu mô hình ban đầu nếu chưa có tệp.
-Các lần huấn luyện lại chỉ chạy khi bấm nút.
+```python
+from services import get_catalog, predict_shift, recommend_options, get_management_dashboard
 
-Kết quả thực đo trên 1.197 dòng gốc:
+catalog = get_catalog()
+item = next(row for row in catalog["items"] if row["product"] == "Áo thun - Mẫu 02")
 
-- Tập học: 957 dòng. Tập kiểm tra: 240 dòng.
-- R²: **0.1882157880997436**.
-- MAE: **0.10713407084117196**, tương đương khoảng 10,71 điểm phần trăm.
+inputs = {
+    "target": 0.8,       # tỷ lệ, không phải 80
+    "smv": item["smv"],
+    "workers": 30.5,     # 30 người cả ca + 1 người nửa ca
+    "overtime": 60,       # tổng phút của cả tổ
+    "bonus": 10000,       # VNĐ nguyên
+    "idle": 0,            # phút nguyên
+}
 
-R² dưới 0,5 sẽ hiện cảnh báo. Không làm tròn R² và MAE trong phần thông tin mô hình.
-Dự báo âm được kẹp về 0 và ghi rõ. Không kẹp trên ở 100% vì dữ liệu có năng suất vượt 1.
-Thay đổi một thông số trong hồi quy chỉ là mô phỏng, không chứng minh quan hệ nhân quả.
-Các tên sản phẩm được tài liệu mô tả là tạo từ SMV; chưa phải danh mục đã xác minh tại xưởng.
+prediction = predict_shift(inputs)
+options = recommend_options(inputs)
+dashboard = get_management_dashboard(product=item["product"])
+```
 
-## Chọn kịch bản
+`get_catalog()` trả `items` gồm SKU, tên sản phẩm, SMV trung vị, các giá trị SMV quan sát được và cờ `has_multiple_smv`. Một SKU/sản phẩm có nhiều SMV không bị chọn ngẫu nhiên. `input_limits` và `recommendation_limits` nêu giới hạn, bước và đơn vị.
 
-Năm dòng gồm Giữ nguyên, Tăng ca, Thêm công nhân, Tăng thưởng và Kết hợp.
-Mỗi phương án đơn chỉ thay đổi biến tương ứng theo thanh trượt.
-Phương án kết hợp thay đổi cả ba biến.
-Thanh trượt nhập mức tuyệt đối, không phải lượng cộng thêm.
-Mặc định mỗi thanh trượt ở giữa giá trị đầu ca và giới hạn tối đa.
-Khi mở mới, bảng đã có các phương án điều chỉnh để so sánh.
-Nếu phương án không thay đổi thông số, bảng ghi “Chưa kéo thanh trượt”.
-Dòng Giữ nguyên luôn dùng thông số đầu ca.
+Form có thể gửi trực tiếp `workers=30.5`, hoặc gửi `full_shift_workers=30` cùng `has_half_shift_worker=True`; facade quy đổi cặp trường đó thành 30,5. Số người cả ca phải là số nguyên không âm và cờ nửa ca phải là boolean. Catalog trả giới hạn riêng khi bật/tắt cờ này.
 
-Điểm can thiệp bằng tổng `|giá trị mới − giá trị đầu ca| / khoảng thanh trượt`.
-Chọn dòng đạt chỉ tiêu có điểm thấp nhất. Nếu bằng điểm, chọn dòng đứng trước trong bảng.
-Giữ nguyên được chọn nếu đã đạt mục tiêu. Không tìm kiếm tối ưu ngoài năm phương án đã chọn.
-Điểm này không quy đổi thành tiền hoặc chi phí lao động.
-Thanh trượt cho phép giảm thông số; điểm can thiệp vẫn dùng độ thay đổi tuyệt đối.
+`predict_shift(inputs)` trả các trường đã kiểm tra `inputs`, `raw`, `value`, `clipped`, `achieved`, `status`, `difference_to_target`, `shortfall` và `surplus`. `value` là tỷ lệ; dự báo âm được kẹp về 0, không kẹp trên ở 1. Thiếu trường, chuỗi số, boolean, số không hữu hạn, workers ngoài bước 0,5, bonus không nguyên hoặc thời gian không nguyên đều phát sinh `ValueError`. Số 0 hợp lệ cho tăng ca, tiền thưởng và máy dừng.
 
-Giới hạn được tính từ dataset gốc, không đổi theo nhật ký:
+`recommend_options(inputs)` trả baseline và ba hướng: nhân lực, tăng ca, kết hợp. Mỗi hướng có `available`, dự báo, đủ/chưa đủ mục tiêu, thay đổi sáu đầu vào, chênh lệch năng suất và lý do. Tập tìm kiếm hữu hạn, dựa trên phân vị 95% của lịch sử hợp lệ và giới hạn cấu hình; các ứng viên được dự báo theo lô. Kết quả được gọi là phương án tốt nhất trong phạm vi đã tìm. Đây không phải tối ưu toàn cục hay khẳng định quan hệ nhân quả. Hướng không cải thiện hoặc hết khoảng điều chỉnh trả `available=False` cùng lý do.
 
-| Biến | Giới hạn |
+`get_management_dashboard(product=None)` trả `kpis`, `charts`, `history` và chất lượng dữ liệu trong cùng phạm vi bộ lọc. KPI gồm số ca hợp lệ, actual trung bình không trọng số, tỷ lệ actual >= target và tổng phút máy dừng. Biểu đồ so sánh target/actual theo sản phẩm kèm số quan sát và scatter tiền thưởng VNĐ/actual kèm target, sản phẩm, dòng nguồn. Bảng giữ đủ chín trường đã chuẩn hóa cùng `source_row`; ngày ca không được thêm vì workbook không có ngày gốc. Lọc rỗng trả count 0, các KPI không xác định là `None` và các mảng rỗng.
+
+Các hàm facade không phụ thuộc Streamlit. Dataset và model đã nạp được giữ trong cache theo đường dẫn, kích thước và thời điểm sửa file. Mỗi dự báo chỉ kiểm tra metadata file và dùng model trong bộ nhớ; không mở Excel, quét toàn bộ dataset hoặc huấn luyện lại.
+
+## Hợp đồng dữ liệu và đơn vị
+
+Thứ tự estimator giữ nguyên: `target`, `smv`, `workers`, `overtime`, `bonus`, `idle`; biến đích là `actual`. Tỷ lệ `0.8` tương ứng 80%, SMV là phút/sản phẩm, workers là lao động quy đổi theo ca, overtime là tổng phút tăng ca của tổ, idle là phút máy dừng, bonus là VNĐ. SKU và tên sản phẩm chỉ thuộc catalog/dashboard, không đi vào estimator.
+
+| Cột Excel | Trường nội bộ |
 | --- | --- |
-| Công nhân | 2–60 người |
-| Tăng ca | 0–phân vị 95, xấp xỉ 10.368 phút cả tổ |
-| Tiền thưởng | 0–phân vị 95, bằng 88 BDT |
+| Mã SKU (Sản phẩm) | `sku` |
+| Tên sản phẩm (Đề xuất) | `product` |
+| Năng suất mục tiêu(%) | `target` |
+| Thời gian tạo sản phẩm (Phút) | `smv` |
+| Thời gian tăng ca (Phút) | `overtime` |
+| Tiền thưởng năng suất (VNĐ) | `bonus` |
+| Thời gian máy nghỉ(Phút) | `idle` |
+| Số công nhân(Người) | `workers` |
+| Năng xuất thực tế (%) | `actual` |
 
-## Nhật ký, độ trôi và phiên bản mô hình
+Miền lịch sử và miền nhập ca mới là hai kiểm tra riêng. Lịch sử giữ nguyên các bonus VNĐ dạng thập phân trong workbook; không chuyển đổi hoặc làm tròn lại. Bản hiện tại không có workers lệch bước 0,5; nếu có, quality report sẽ liệt kê dòng đó nhưng không tự sửa dữ liệu. Input ca mới cần bonus VNĐ nguyên không âm, phút tăng ca/máy dừng nguyên không âm, và workers theo bước 0,5. Bonus intake tối đa được giới hạn theo giá trị lớn nhất trong lịch sử hợp lệ và cấu hình.
 
-SQLite nằm tại `runtime/logs.sqlite`. Lọc lịch sử theo tên tổ chính xác và khoảng ngày gồm hai đầu.
-Khoảng bộ lọc ngày là 2000–2100. Thời điểm ghi dùng UTC; ngày ca do người dùng chọn.
-Dữ liệu thiếu, sai kiểu, không hữu hạn hoặc ngoài miền sẽ bị từ chối trước khi ghi.
-Lỗi trong giao dịch SQLite không làm mất nhật ký đã có.
+`source_hashes.json` giữ checksum nguồn ban đầu, không được thay bằng checksum vận hành. `dataset/operational_manifest.json` ghi riêng hai checksum. Bản nguồn ban đầu có SHA-256 `27a73111854ce55870811bbd12c49733576fec57b240c98c585aef356446466c`; workbook vận hành VNĐ hiện tại có SHA-256 `ace6233930cc623fe5abb20d0747fad068b6ae931480df2fe2f507fb73337bcd`. Đối chiếu với workbook trong Git cho thấy chỉ header/giá trị tiền thưởng đổi; tám cột còn lại giữ nguyên. Backend không nhân tỷ giá.
 
-Độ trôi dữ liệu so sánh toàn bộ nhật ký với thống kê tập học của mô hình hiện tại.
-Với mỗi biến, tính `|trung bình nhật ký − trung bình tập học| / độ lệch chuẩn tập học`.
-Độ lệch chuẩn dùng `ddof=0`. Vượt ngưỡng mặc định 1 là **cảnh báo**.
-Nếu độ lệch chuẩn bằng 0, trung bình khác nhau sẽ cảnh báo.
-Dữ liệu không hợp lệ được ghi là **LỖI**, tách khỏi cảnh báo drift.
-Chưa có nhật ký thì chưa tính drift. Đây là quy tắc đơn giản, không phải kiểm định thống kê.
-Bộ lọc lịch sử không làm thay đổi tập nhật ký dùng cho drift hoặc huấn luyện.
+## Huấn luyện và tương thích model
 
-Cần ít nhất 30 dòng mới so với mã nhật ký cuối cùng của mô hình hiện tại để huấn luyện lại.
-Huấn luyện dùng tập học gốc cộng toàn bộ nhật ký hợp lệ; giữ nguyên tập kiểm tra gốc.
-Tên tổ, tên sản phẩm và mã SKU không phải biến học.
-Do dữ liệu không có ngày gốc, chưa đánh giá theo thời gian hoặc tại xưởng.
-Chia ngẫu nhiên có thể để các bản ghi tương tự ở cả hai tập; đây là giới hạn đánh giá.
+`model.train(frame)` so sánh Linear Regression, Decision Tree và Random Forest. Chia nhóm đầu vào bằng GroupShuffleSplit 80/20, seed 42; GroupKFold năm phần chỉ trên tập học. Mô hình thắng được chọn theo RMSE kiểm định chéo trung bình; test chỉ báo cáo đánh giá cuối. `model.activate(bundle)` ghi nguyên tử và giữ model trước tại `runtime/model.previous.joblib`.
 
-Mô hình và metadata lưu chung trong `runtime/model.joblib`.
-Metadata có ngày học, R², MAE, số dòng, số dòng học/kiểm tra và thống kê sáu biến.
-Trước khi ghi bản mới, lưu bản cũ tại `runtime/model.previous.joblib`.
-**Quay lại bản cũ** khôi phục phiên bản liền trước; không xóa nhật ký.
-Chỉ giữ một bản trước đó. Sau khi quay lại, số dòng mới được tính theo bản đã khôi phục.
-Khóa hệ điều hành ngăn hai lần cập nhật đồng thời và tự nhả khi tiến trình dừng.
-Không tự ý thay tệp joblib bằng tệp từ nguồn không tin cậy.
+Gói mới mang schema version, đơn vị `VND`, fingerprint dataset, thứ tự feature, thuật toán, cấu hình chia tập và chỉ số đánh giá. Model cũ thiếu bằng chứng schema/đơn vị vẫn được giữ và đọc để kiểm tra, nhưng dự báo bị chặn với thông báo cần huấn luyện model mới. Chỉ nạp joblib từ nguồn tin cậy.
 
-## Cấu hình và các lựa chọn bổ sung
+## Kết quả đo
 
-Sửa `config.py` để đổi đường dẫn, giới hạn, ngưỡng R², drift hoặc số dòng mới tối thiểu.
-Ngoài các quyết định đã chốt, triển khai chọn:
+Huấn luyện trên 1.197 dòng hợp lệ, 957 dòng train và 240 dòng test. Mô hình thắng là **Random Forest**, chọn theo CV RMSE thấp nhất. MAE/RMSE dùng tỷ lệ năng suất; R² không có đơn vị.
 
-- Seed 42; ngưỡng cảnh báo R² 0,5; ngưỡng drift 1.
-- Thống kê drift theo tập học; giữ cố định tập kiểm tra gốc khi huấn luyện lại.
-- Chuẩn hóa điểm can thiệp theo khoảng thanh trượt, trọng số bằng nhau và ưu tiên thứ tự khi hòa.
-- Giới hạn đầu ca và cuối ca theo miền dữ liệu: công nhân 2–89, tăng ca 0–25.920, thưởng 0–3.600, máy dừng 0–300.
-- SMV phải từ 0,01 đến 1.000; năng suất thực tế ghi nhận từ 0 đến 2. Các ngưỡng kiểm tra này ở `RANGES`.
-- Tên tổ bắt buộc, tối đa 200 ký tự; có thể nhập tên tạm khi chưa định danh tổ.
-- Lưu một bản mô hình trước đó; ghi tệp nguyên tử và khóa bằng thư viện chuẩn.
-- Nút dự báo lưu kết quả theo thông số và phiên bản; đổi đầu vào phải dự báo lại.
-- Dùng tab theo bốn bước; màu nhấn xanh dầu `#00665C`, tiêu đề và nội dung Tahoma cài sẵn trên Windows.
-- Không tải font ngoài. Máy khác cần có font hỗ trợ tiếng Việt; có font dự phòng DejaVu.
-- Bố cục dựa vào trình tự vận hành trong tài liệu, không thêm màn hình quảng bá.
+| Mô hình | CV RMSE TB | CV MAE TB | CV R² TB | Test MAE | Test RMSE | Test R² |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Linear Regression | 0,15344 | 0,10899 | 0,21037 | 0,12109 | 0,16569 | 0,11398 |
+| Decision Tree | 0,14124 | 0,08651 | 0,33254 | 0,10444 | 0,16140 | 0,15927 |
+| Random Forest | **0,12499** | 0,07635 | 0,47772 | **0,09738** | **0,15297** | **0,24473** |
 
-Giao diện hiện dùng nền #F8F9FA, mặt phẳng trắng và chữ #1E293B.
-Chữ phụ #64748B đạt 4,515:1 trên nền; chữ trắng/nút chính đạt 6,874:1.
-Nhãn xanh đạt 5,016:1; nhãn đỏ đạt 4,829:1; badge xanh đạt 6,492:1.
-Chưa xác minh hiển thị font và dấu tiếng Việt bằng trình duyệt thật do công cụ UI bị chặn.
+Test R² của model được chọn là 0,24473; sai số test RMSE tương đương khoảng 15,30 điểm phần trăm năng suất. Kết quả này mô tả độ khớp trên split đã ghi trong metadata, không chứng minh quan hệ nhân quả.
 
-## Khác biệt giữa tài liệu và dữ liệu
+| Đo sau khi nạp model | Median | Trung bình |
+| --- | ---: | ---: |
+| Một dự báo `predict_shift` | 16,62 ms | 16,86 ms |
+| Sinh ba phương án `recommend_options` | 83,33 ms | 83,69 ms |
 
-- Tài liệu ghi BDT; Excel ghi NDT. Giao diện dùng nhãn BDT theo yêu cầu mới; chỉ đổi nhãn, không quy đổi giá trị.
-- Tiêu đề Excel ghi `(%)` nhưng giá trị là tỷ lệ. Mục tiêu từ 0,07–0,8; thực tế có giá trị trên 1.
-- Excel ghi sai chính tả `Năng xuất`. Hàm `rename_columns` giữ đúng tên gốc khi ánh xạ.
-- Tài liệu nêu chọn tổ đầu ca nhưng dataset không có cột tổ. Chỉ ghi tên tổ tự do cuối ca.
-- Tài liệu gợi ý nhân sự nguyên; dữ liệu có lao động quy đổi như 30,5 người.
-- Dataset có 89 công nhân, 25.920 phút tăng ca và thưởng 3.600; thanh trượt dùng giới hạn thấp hơn đã chốt.
-- Tài liệu dùng các tên `định mức`, `máy dừng`; Excel ghi `tạo sản phẩm`, `máy nghỉ`. Mô hình coi chúng là SMV và idle time theo yêu cầu.
-- Tất cả 70 tên sản phẩm hiện có một SMV. Không có trường hợp phải thay bằng trung vị; logic trung vị đã được kiểm thử.
-- Tài liệu mô tả tìm phương án tối ưu; bản này chỉ so sánh năm phương án theo quyết định đã chốt.
+Huấn luyện cả ba mô hình và CV mất **3,31 giây**. Các thời gian dự báo lấy trên cùng một máy, sau một lần warm-up; 100 dự báo đơn và 10 lần sinh phương án. Kiểm thử: **101 passed, 1 skipped**, coverage backend **94,71%** (ngưỡng 90%). Test bị skip kiểm tra các tài liệu nguồn ngoài thư mục repo không có trong clone này.
 
-## Kiểm thử và bằng chứng
+## Giao diện Streamlit
 
-```powershell
-cd C:\codev2\chieut4\garment_app
-python -m pytest --cov
-```
+`app.py` điều phối hai trang và state theo `st.session_state`. `frontend_component.py` nạp các tài sản tĩnh và mount `st.components.v2.component` với một key ổn định. JavaScript chỉ quản lý tương tác, chuỗi đang gõ, debounce 300 ms và cách vẽ dữ liệu backend; mọi dự báo, phương án và thống kê đều do `ui_adapter.py` gọi qua `services.py`. Khi nhập liệu sai hoặc chưa đủ, adapter không gọi dự báo. Component giữ catalog ở phía trình duyệt sau lần truyền đầu; lịch sử dashboard chỉ được đưa vào payload khi đang xem trang quản trị.
 
-Cấu hình yêu cầu ít nhất 90% dòng mã ứng dụng. Không đưa mã test vào mẫu số độ phủ.
-Báo cáo HTML tại `htmlcov/index.html`.
-Test gồm đầu vào chính/biên/lỗi, mô hình, SMV, đèn, kịch bản, SQLite,
-drift, huấn luyện, khôi phục, lỗi ghi tệp và tiến trình bị dừng.
-AppTest chạy bốn bước, lọc nhật ký và thao tác huấn luyện/khôi phục trên thư mục tạm.
-Nhật ký kiểm thử không đưa vào cơ sở dữ liệu chạy thật.
+Mục tiêu trên form nhập theo phần trăm (ví dụ `80`) và adapter đổi thành tỷ lệ `0.8`. SMV lấy từ catalog. Người dùng nhập nhân công cả ca bằng số nguyên và chọn riêng người nửa ca; facade nhận cặp `full_shift_workers`/`has_half_shift_worker` để quy đổi sang `workers` theo bước 0,5. Tăng ca và máy dừng là phút nguyên; tiền thưởng là VNĐ nguyên. Chuỗi rỗng được giữ riêng, không biến thành 0; parser hỗ trợ dấu phẩy thập phân và dấu chấm phân cách hàng nghìn theo cách nhập Việt Nam.
 
-Máy chủ thật đã chạy bằng `python -m streamlit run app.py`; health trả HTTP 200, nội dung `ok`.
-Chưa thao tác bốn bước trên trình duyệt thật. Browser host không khả dụng;
-kênh Windows bị dừng vì chưa hỗ trợ thực thi chính sách URL của trình duyệt.
-Do đó chưa xác minh bố cục desktop/điện thoại và dấu tiếng Việt bằng hình ảnh.
-Không coi AppTest là bằng chứng kiểm tra trực quan.
-Rà soát mã độc lập đã kiểm tra các sửa đổi và không còn blocker/major trong phạm vi đã rà soát.
+Trang dự báo không huấn luyện model khi mở. `services.predict_shift` chỉ chạy khi mọi trường hợp lệ. Nếu model thiếu, sai schema/đơn vị VNĐ hoặc dataset không khớp fingerprint, giao diện báo model/dữ liệu chưa sẵn sàng; không thay bằng số giả hay model cũ. Khi dự báo chưa đạt mục tiêu, component gửi sự kiện revision hiện tại để Python gọi `services.recommend_options` ở lượt riêng. Kết quả cũ bị bỏ qua nếu thông số đã đổi.
 
-`source_hashes.json` lưu SHA-256 của chín tệp gốc để đối chiếu tính nguyên vẹn.
-Không sửa tệp gốc, không commit, không push và không gọi dịch vụ mô hình bên ngoài.
-Chỉ tải hai gói kiểm thử pytest-cov và coverage theo sự cho phép riêng của người dùng.
-
-
-## Kết quả xác minh lần bàn giao ban đầu
-
-- Lệnh: `python -m pytest --cov -q`.
-- Pytest: chạy 92 / đạt 92 / lỗi 0 / NOT RUN 0.
-- Độ phủ mã ứng dụng: **98,29%**, 344/350 dòng; mỗi mô-đun trên 90%.
-- AppTest: 5 bài kiểm thử giao diện, đã nằm trong tổng 92 bài.
-- Máy chủ và health: chạy 1 / đạt 1 / lỗi 0 / NOT RUN 0.
-- Kiểm tra trực quan: chạy 0 / đạt 0 / lỗi 0 / NOT RUN 7.
-  Bảy kiểm tra gồm bốn bước trên trình duyệt, bố cục desktop, bố cục điện thoại và font/dấu tiếng Việt.
-  Lý do: công cụ truy cập trình duyệt bị chặn như mô tả ở trên.
-- Biên dịch bảy mô-đun bằng compileall: đạt.
-- Tính nguyên vẹn nguồn: 9/9 SHA-256 khớp.
-- Canny: không có phiên ghi nhận cho thư mục mới; không dùng làm bằng chứng kiểm thử.
-- Hai warning từ môi trường/test được giữ nguyên theo yêu cầu, không phải test thất bại.
-- Chưa hoàn thành điều kiện nghiệm thu bằng trình duyệt thật. R² thấp là giới hạn dự báo hiện có.
-
-
-## Sửa ba lỗi giao diện sau kiểm tra trình duyệt
-
-Phạm vi thay đổi: `app.py`, `tests/test_app.py` và tài liệu này.
-Không sửa mô hình, cấu trúc dữ liệu, giới hạn cấu hình hoặc tệp nguồn.
-Giữ nguyên CSS tiêu đề Tahoma đã được người dùng sửa.
-Bỏ khai báo Georgia không còn dùng để tránh tái sử dụng nhầm.
-
-Hai câu lệnh ba ngôi gọi Streamlit ở tab 2 và tab 3 đã đổi thành `if/else`.
-Kiểm tra AST không còn biểu thức ba ngôi đứng riêng hoặc giá trị trần khác.
-Các biểu thức chọn giá trị bên trong phép gán và ô bảng vẫn được giữ.
-Chúng không phải câu lệnh trần để Streamlit magic hiển thị.
-
-Thanh trượt vẫn là giá trị tuyệt đối.
-Mặc định mới bằng `(giá trị đầu ca + giới hạn tối đa) / 2`.
-Với đầu ca mặc định, các mức là 45 công nhân, khoảng 5.184 phút tăng ca và 44 BDT thưởng.
-Đổi tiền tố khóa widget thành `what_absolute` để phiên đang mở không giữ mặc định cũ.
-Lần tải lại sau cập nhật sẽ khởi tạo lại ba thanh trượt theo quy tắc mới.
-Sau đó lựa chọn của người dùng được giữ khi ứng dụng chạy lại.
-Không thêm thuật toán tối ưu hoặc thay đổi cách dự báo.
-
-Thêm 9 ca kiểm thử:
-
-- Ba ca AppTest thu toàn bộ nội dung hiển thị của ứng dụng, gồm bốn tab và tài liệu magic.
-  Trước sửa: cả ba FAIL, tìm thấy cả `DeltaGenerator` và `Creator of Delta`.
-  Sau sửa: cả ba PASS, gồm lúc mới mở và sau dự báo với mục tiêu 0 hoặc 0,8.
-- CSS không có Georgia hoặc font serif cho h1/h2/h3; giữ chuỗi font Tahoma.
-- Mặc định có năm dòng thông số khác nhau và ít nhất hai năng suất khác nhau.
-  Không vượt giới hạn; Giữ nguyên bằng đúng dự báo tab 2.
-- Phương án không thay đổi có lý do “Chưa kéo thanh trượt”; giữ lựa chọn sau chạy lại.
-- AST không có câu lệnh giá trị trần ngoài lời gọi hàm.
-- Hai ca kiểm tra mặc định khi đầu ca nằm ở biên dưới hoặc biên trên thanh trượt.
-
-Lệnh xác minh: `python -m pytest -q --cov=. --cov-report=term-missing`.
-Kết quả: chạy 101 / đạt 101 / lỗi 0 / NOT RUN 0; độ phủ mã ứng dụng 98,59%.
-Máy chủ thật đang chạy `python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501`.
-Health `http://127.0.0.1:8501/_stcore/health` trả HTTP 200, nội dung `ok`.
-Kiểm tra trình duyệt thật sau lần sửa này: NOT RUN; chỉ dùng AppTest và health.
-Giữ nguyên giờ huấn luyện, độ chính xác R²/MAE và warning pytest. Nhãn tiền thưởng hiện dùng BDT theo yêu cầu mới.
-Chín tệp nguồn có SHA-256 khớp bản ghi trước triển khai.
-
-
-## Giao diện công nghiệp và biểu đồ JavaScript
-
-Phần này dành cho người vận hành và người bảo trì giao diện.
-Mục đích là đọc nhanh dự báo, so sánh phương án và nhận biết độ trôi dữ liệu.
-
-Bản thiết kế giữ Streamlit. Không tách backend, không thêm thư viện Python.
-Dùng nền sáng #F8F9FA, mặt phẳng trắng và màu nhấn xanh dầu #00665C.
-Tahoma dùng cho cả tiêu đề và nội dung để giữ dấu tiếng Việt.
-Nội dung từ 16 px, chú thích từ 14 px; vùng bấm chính cao ít nhất 44 px.
-KPI dự báo, mục tiêu, trạng thái và điểm can thiệp dùng chữ lớn.
-Các ô nhập chia hai cột; bố cục thu về một cột khi thiếu chiều rộng.
-Không dùng gradient, animation hoặc thẻ lồng nhau.
-
-### Ba biểu đồ
-
-- **Bước 2:** thước năng suất có dải đỏ/xanh và vạch mục tiêu.
-  Trục tự mở rộng khi dự báo vượt 100%; số liệu gốc không bị kẹp trên.
-- **Bước 3:** năm phương án đặt trên trục điểm can thiệp và năng suất.
-  Vạch ngang là mục tiêu. Điểm hình thoi và badge chỉ phương án Python đã chọn.
-  Bảng số liệu giữ đủ năm dòng; chênh lệch ghi bằng điểm phần trăm.
-- **Bước 4:** sáu thanh độ trôi dữ liệu và vạch ngưỡng đang chọn.
-  Trường hợp vô hạn dùng thanh ở mép thang đo; nút chi tiết ghi rõ “Không giới hạn”.
-  Biểu đồ không đổi vô hạn thành 0. Bảng giữ nguyên giá trị drift.
-
-Di chuột hoặc chạm điểm để xem tooltip. Các nút tên điểm hỗ trợ chạm và bàn phím.
-Khi chưa có nhật ký, ứng dụng báo thiếu dữ liệu, không vẽ sáu số 0 giả.
-Nếu biểu đồ không khởi tạo được, có thông báo tiếng Việt và số liệu đối chiếu bên ngoài biểu đồ.
-
-Thanh trượt vẫn là mức tuyệt đối và giữ công thức mặc định đã chốt.
-Vạch đen đánh dấu mức đầu ca; nhãn ghi đầu ca và tối đa.
-Tooltip của thanh trượt hiện giá trị khi kéo. Sau khi thả thanh trượt,
-Streamlit chạy lại để cập nhật bảng và biểu đồ từ kết quả Python.
-Không chạy thêm mô hình dự báo trong JavaScript.
-Điểm can thiệp chưa có phương án đạt được hiển thị bằng dấu “—”.
-
-### Tệp và vận hành ngoại tuyến
-
-- `app.py`: bố cục, KPI, form và nối các biểu đồ với kết quả nghiệp vụ.
-- `ui.py`: mã hóa dữ liệu an toàn, tạo HTML biểu đồ, badge và mốc thanh trượt.
-- `assets/charts.mjs`: cấu hình Chart.js, vạch mục tiêu, tooltip và điều khiển bàn phím.
-- `assets/chart.umd.min.js`: Chart.js 4.6.1, đã tải một lần từ npm theo sự cho phép của người dùng.
-- `assets/Chart.js-LICENSE.md`: giấy phép MIT của thư viện.
-
-Giữ thư mục `assets` cạnh `app.py` khi sao chép ứng dụng.
-Biểu đồ nhúng thư viện cục bộ; không cần CDN hoặc API khi vận hành.
-SHA-256 thư viện: `87364cc2b2a76a6684929e7d6b80b18a897794db38400caff1fcf1791c6925d2`.
-Sáu mô-đun backend và `source_hashes.json` không thay đổi.
-
-### Kiểm thử bản giao diện này
-
-```powershell
-python -m pytest -q --cov=. --cov-report=term-missing
-node --experimental-test-coverage --test-coverage-include=assets/charts.mjs --test-coverage-lines=90 --test tests/charts.test.mjs
-```
-
-Node.js chỉ dùng cho kiểm thử JavaScript, không cần khi vận hành ứng dụng.
-Bản kiểm thử này dùng Node.js 24.18.0.
-
-- Python: chạy 128 / đạt 128 / lỗi 0 / NOT RUN 0; độ phủ dòng 98,78%.
-- JavaScript: chạy 8 / đạt 8 / lỗi 0 / NOT RUN 0; độ phủ dòng 100%, nhánh 98,80%.
-- Không đưa mã thư viện bên thứ ba vào tỷ lệ độ phủ mã tự viết.
-- Các test Chart.js dùng Canvas giả lập trong Node; không phải bằng chứng hiển thị trình duyệt thật.
-- Kiểm thử mới về component biểu đồ đã FAIL trước triển khai do không có iframe; hiện PASS.
-- AppTest kiểm tra ba iframe, dữ liệu đổi theo thanh trượt/ngưỡng, dự báo trên 100%, kẹp âm và bốn bước cũ.
-- Test bảo mật kiểm tra chuỗi đóng thẻ script không thoát khỏi payload JSON.
-- Các test tương phản chữ đều đạt ít nhất 4,5:1.
-- Máy chủ Streamlit thật trên cổng 8501: health HTTP 200, nội dung `ok`.
-- Đối chiếu baseline: 15/15 hash giữ nguyên, gồm sáu mô-đun backend, XLSX/DOCX và manifest nguồn.
-- Rà soát độc lập không phát hiện blocker/major trong phạm vi mã giao diện.
-- Không dọn warning pytest, không commit hoặc push.
-
-Kiểm tra trực quan desktop, tablet, canvas khi đổi tab ẩn và tooltip cảm ứng vẫn cần trình duyệt thật.
-Không dùng AppTest hoặc Canvas giả lập để khẳng định các kiểm tra đó đã đạt.
-
-Lần kiểm tra kênh trình duyệt sau redesign: browser host không khả dụng.
-Do đó desktop/tablet, resize khi đổi tab và tooltip cảm ứng là NOT RUN về kiểm tra trực quan.
-Các bài AppTest vẫn PASS; chúng không thay thế kiểm tra trực quan này.
-
-
-## GitHub và triển khai demo miễn phí
-
-Dành cho người trình bày và người quản lý repo.
-Không cần mua ổ đĩa hoặc đăng ký gói trả phí để dùng bản demo.
-
-Repo: `NiTz130/garment-productivity-streamlit` (private).
-Nhánh triển khai: `feat/initial-release`. Tệp chạy: `app.py`. Python: `3.13`.
-Dùng Streamlit Community Cloud tại https://share.streamlit.io/.
-Chọn repo, nhánh và tệp trên; trong Advanced settings chọn Python 3.13 rồi Deploy.
-Lần đầu có thể cần đăng nhập và cấp quyền đọc repo private cho Streamlit.
-Không nhập khóa API; ứng dụng này không cần dịch vụ dự báo bên ngoài.
-
-Giữ nguyên thư mục `dataset/` và `assets/` khi triển khai.
-Bản Excel đóng gói có SHA-256 bằng tệp gốc; không kèm các đề bài DOCX hoặc RAR.
-Phiên bản thư viện Python được khóa trong `requirements.txt`.
-`runtime/`, cơ sở dữ liệu, mô hình đã học, cache và secrets không đưa lên GitHub.
-Trên host mới, mô hình ban đầu được huấn luyện từ dataset gốc và nhật ký bắt đầu rỗng.
-
-Đây là demo dùng chung; chỉ nhập dữ liệu giả lập cho tên tổ và số liệu cuối ca.
-Không dùng host miễn phí làm nơi lưu nhật ký chính thức.
-Máy chủ khởi tạo lại có thể làm mất nhật ký và bản huấn luyện mới.
-
-Trong bản clone không có bộ tài liệu gốc ở thư mục cha, test hash toàn bộ tài liệu là NOT RUN.
-Test hash dataset đóng gói vẫn bắt buộc chạy. Trên máy gốc, test bảo vệ đủ chín tệp vẫn chạy.
-
-
-### Bằng chứng đóng gói để xuất bản
-
-- Máy nguồn: chạy 132 / đạt 132 / lỗi 0 / NOT RUN 0; độ phủ 98,79%.
-- Bản xuất sạch: đạt 131 / lỗi 0 / NOT RUN 1; thiếu bộ đề bài gốc ngoài repo.
-- JavaScript: chạy 8 / đạt 8 / lỗi 0; độ phủ dòng 100%.
-- Giữ nguyên hash chín tệp gốc và manifest ở máy nguồn.
-- `.gitattributes` tắt đổi dòng cho manifest để bản Git giữ nguyên byte.
-- Không đưa runtime, dữ liệu nhật ký, mô hình đã học hoặc secrets lên repo.
-- Repo private đã được tạo và push. Chưa có bằng chứng deploy cloud thành công.
-- Deploy Community Cloud cần đăng nhập và cấp quyền đọc repo; không dùng dịch vụ trả phí.
+Không cần dependency frontend bổ sung; phiên bản `streamlit==1.66.1` trong `requirements.txt` cung cấp component API hai chiều. Kiểm thử adapter và nghiệp vụ bằng `python -X utf8 -m pytest -q --basetemp=.tmp/pytest-final` (coverage backend tối thiểu 90%); kiểm tra cú pháp JavaScript bằng `node --check frontend/app.js` với Node hỗ trợ ES modules.

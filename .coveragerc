@@ -1,5 +1,5 @@
 [run]
-source = app,ui,config,data,model,scenarios,store,drift
+source = config,data,analysis,model,services
 omit = tests/*
 [report]
 fail_under = 90
