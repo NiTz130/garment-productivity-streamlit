@@ -5,7 +5,7 @@
 ## Cài đặt và kiểm thử
 
 ```powershell
-Set-Location D:\garment-productivity-streamlit
+Set-Location <thư mục chứa repo>
 python -m pip install -r requirements.txt
 python -X utf8 -c "from data import load_data; import model; bundle = model.train(load_data()); model.activate(bundle); print(bundle['selected_model'])"
 python -m streamlit run app.py --server.address 127.0.0.1
@@ -21,9 +21,9 @@ Frontend có hai trang theo bản thiết kế Stitch trong `docs/`: dự báo t
 python -X utf8 -m pytest -q --basetemp=.tmp/pytest-final
 ```
 
-Coverage backend giữ ngưỡng tối thiểu 90%. Workbook nguồn được đọc ở sheet đầu tiên và không bị ghi lại. SQLite không được dùng. Dataset mặc định ở `dataset/`; một file cùng tên trong thư mục cha được ưu tiên nếu có.
+Coverage giữ ngưỡng tối thiểu 90%. Workbook nguồn được đọc ở sheet đầu tiên và không bị ghi lại. SQLite không được dùng. Ứng dụng chỉ đọc dataset VNĐ trong `dataset/`. Tệp cùng tên ở thư mục cha (bản NDT gốc) bị bỏ qua và chỉ dùng để đối chiếu hash.
 
-Lần kiểm tra tích hợp gần nhất: **113 passed, 1 skipped**, coverage backend **95,17%**. Hai trang đã được kiểm tra trên Edge headless bằng dữ liệu thật: dự báo tự cập nhật, ba hướng điều chỉnh, lọc lịch sử và bố cục mobile 390 px. Test bị bỏ qua cần bộ tài liệu nguồn ngoài repo.
+Lần kiểm tra tích hợp gần nhất: **262 passed, 1 skipped**, coverage backend **96,66%**. 56 test trong `tests/test_ui_browser.py` mở máy chủ Streamlit thật và điều khiển Edge headless (Playwright), gồm dự báo tự cập nhật, ba hướng điều chỉnh, lọc lịch sử, phân trang, lỗi nhập liệu, thiếu model và bố cục mobile 390 px. Test bị bỏ qua cần bộ tài liệu nguồn ngoài repo.
 
 ## Dùng facade từ frontend
 
@@ -47,7 +47,7 @@ options = recommend_options(inputs)
 dashboard = get_management_dashboard(product=item["product"])
 ```
 
-`get_catalog()` trả `items` gồm SKU, tên sản phẩm, SMV trung vị, các giá trị SMV quan sát được và cờ `has_multiple_smv`. Một SKU/sản phẩm có nhiều SMV không bị chọn ngẫu nhiên. `input_limits` và `recommendation_limits` nêu giới hạn, bước và đơn vị.
+`get_catalog()` trả `items` gồm SKU, tên sản phẩm, SMV trung vị, các giá trị SMV quan sát được và cờ `has_multiple_smv`. Một SKU/sản phẩm có nhiều SMV không bị chọn ngẫu nhiên. `input_limits` và `recommendation_limits` nêu giới hạn, bước và đơn vị. `input_limits.bonus.typical` nêu khoảng thường gặp (phân vị 25–75 của các ca có thưởng) và tỉ lệ ca có thưởng, vì giới hạn trên bị kéo dài bởi vài ca ngoại lai.
 
 Form có thể gửi trực tiếp `workers=30.5`, hoặc gửi `full_shift_workers=30` cùng `has_half_shift_worker=True`; facade quy đổi cặp trường đó thành 30,5. Số người cả ca phải là số nguyên không âm và cờ nửa ca phải là boolean. Catalog trả giới hạn riêng khi bật/tắt cờ này.
 
@@ -81,28 +81,26 @@ Miền lịch sử và miền nhập ca mới là hai kiểm tra riêng. Lịch 
 
 ## Huấn luyện và tương thích model
 
-`model.train(frame)` so sánh Linear Regression, Decision Tree và Random Forest. Chia nhóm đầu vào bằng GroupShuffleSplit 80/20, seed 42; GroupKFold năm phần chỉ trên tập học. Mô hình thắng được chọn theo RMSE kiểm định chéo trung bình; test chỉ báo cáo đánh giá cuối. `model.activate(bundle)` ghi nguyên tử và giữ model trước tại `runtime/model.previous.joblib`.
+Hệ thống chỉ dùng một mô hình: hồi quy tuyến tính (`LinearRegression` của scikit-learn). `model.train(frame)` chia nhóm đầu vào bằng GroupShuffleSplit 80/20, seed 42, rồi đánh giá bằng GroupKFold năm phần trên tập học. Test chỉ báo cáo đánh giá cuối. Gói model có thuật toán khác (ví dụ Random Forest) bị từ chối và cần huấn luyện lại. `model.activate(bundle)` ghi nguyên tử và giữ model trước tại `runtime/model.previous.joblib`.
 
 Gói mới mang schema version, đơn vị `VND`, fingerprint dataset, thứ tự feature, thuật toán, cấu hình chia tập và chỉ số đánh giá. Model cũ thiếu bằng chứng schema/đơn vị vẫn được giữ và đọc để kiểm tra, nhưng dự báo bị chặn với thông báo cần huấn luyện model mới. Chỉ nạp joblib từ nguồn tin cậy.
 
 ## Kết quả đo
 
-Huấn luyện trên 1.197 dòng hợp lệ, 957 dòng train và 240 dòng test. Mô hình thắng là **Random Forest**, chọn theo CV RMSE thấp nhất. MAE/RMSE dùng tỷ lệ năng suất; R² không có đơn vị.
+Huấn luyện trên 1.197 dòng hợp lệ, 957 dòng train và 240 dòng test. MAE/RMSE dùng tỷ lệ năng suất; R² không có đơn vị.
 
 | Mô hình | CV RMSE TB | CV MAE TB | CV R² TB | Test MAE | Test RMSE | Test R² |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Linear Regression | 0,15344 | 0,10899 | 0,21037 | 0,12109 | 0,16569 | 0,11398 |
-| Decision Tree | 0,14124 | 0,08651 | 0,33254 | 0,10444 | 0,16140 | 0,15927 |
-| Random Forest | **0,12499** | 0,07635 | 0,47772 | **0,09738** | **0,15297** | **0,24473** |
 
-Test R² của model được chọn là 0,24473; sai số test RMSE tương đương khoảng 15,30 điểm phần trăm năng suất. Kết quả này mô tả độ khớp trên split đã ghi trong metadata, không chứng minh quan hệ nhân quả.
+Test R² là 0,11398: mô hình giải thích khoảng 11% biến động năng suất. Sai số test RMSE tương đương khoảng 16,57 điểm phần trăm năng suất. Kết quả này mô tả độ khớp trên split đã ghi trong metadata, không chứng minh quan hệ nhân quả.
 
 | Đo sau khi nạp model | Median | Trung bình |
 | --- | ---: | ---: |
-| Một dự báo `predict_shift` | 16,62 ms | 16,86 ms |
-| Sinh ba phương án `recommend_options` | 83,33 ms | 83,69 ms |
+| Một dự báo `predict_shift` | 4,81 ms | 5,29 ms |
+| Sinh ba phương án `recommend_options` | 43,79 ms | 43,70 ms |
 
-Huấn luyện cả ba mô hình và CV mất **3,31 giây**. Các thời gian dự báo lấy trên cùng một máy, sau một lần warm-up; 100 dự báo đơn và 10 lần sinh phương án. Kiểm thử: **101 passed, 1 skipped**, coverage backend **94,71%** (ngưỡng 90%). Test bị skip kiểm tra các tài liệu nguồn ngoài thư mục repo không có trong clone này.
+Huấn luyện và CV mất **1,67 giây**. Các thời gian dự báo lấy trên cùng một máy, sau một lần warm-up; 100 dự báo đơn và 10 lần sinh phương án. Kiểm thử: **262 passed, 1 skipped**, coverage backend **96,66%** (ngưỡng 90%). Test bị skip kiểm tra các tài liệu nguồn ngoài thư mục repo không có trong clone này.
 
 ## Giao diện Streamlit
 
@@ -111,5 +109,17 @@ Huấn luyện cả ba mô hình và CV mất **3,31 giây**. Các thời gian d
 Mục tiêu trên form nhập theo phần trăm (ví dụ `80`) và adapter đổi thành tỷ lệ `0.8`. SMV lấy từ catalog. Người dùng nhập nhân công cả ca bằng số nguyên và chọn riêng người nửa ca; facade nhận cặp `full_shift_workers`/`has_half_shift_worker` để quy đổi sang `workers` theo bước 0,5. Tăng ca và máy dừng là phút nguyên; tiền thưởng là VNĐ nguyên. Chuỗi rỗng được giữ riêng, không biến thành 0; parser hỗ trợ dấu phẩy thập phân và dấu chấm phân cách hàng nghìn theo cách nhập Việt Nam.
 
 Trang dự báo không huấn luyện model khi mở. `services.predict_shift` chỉ chạy khi mọi trường hợp lệ. Nếu model thiếu, sai schema/đơn vị VNĐ hoặc dataset không khớp fingerprint, giao diện báo model/dữ liệu chưa sẵn sàng; không thay bằng số giả hay model cũ. Khi dự báo chưa đạt mục tiêu, component gửi sự kiện revision hiện tại để Python gọi `services.recommend_options` ở lượt riêng. Kết quả cũ bị bỏ qua nếu thông số đã đổi.
+
+### Font chữ
+
+Giao diện dùng ba họ font, mỗi họ một vai trò. Cả ba đều có bộ ký tự tiếng Việt (`vietnamese` và `latin`) và giấy phép SIL OFL:
+
+| Vai trò | Font | Dùng cho |
+|---|---|---|
+| Chữ thường | Be Vietnam Pro | Nhãn, đoạn văn, nút, ô nhập |
+| Tiêu đề | Source Serif 4 | Tên trang, tiêu đề thẻ, tên thương hiệu |
+| Số liệu | JetBrains Mono | Số, mã SKU, bảng lịch sử |
+
+Tệp `woff2` nằm ở `static/fonts/` kèm `fonts.json` và văn bản giấy phép; ứng dụng không gọi mạng để tải font. Streamlit phục vụ thư mục này nhờ `enableStaticServing` trong `.streamlit/config.toml`, nên **phải chạy `streamlit run app.py` từ thư mục dự án**. `app.js` đăng ký font bằng `FontFace` API vì `@font-face` không hoạt động trong shadow DOM. Không nhúng font vào chuỗi JS: Streamlit gửi lại chuỗi này mỗi lần chạy lại, nhúng font làm mỗi lần nhập liệu nặng thêm khoảng 320 KB. Chữ nghiêng (ghi chú dưới biểu đồ) hiện hiển thị thẳng vì không đóng gói kiểu nghiêng.
 
 Không cần dependency frontend bổ sung; phiên bản `streamlit==1.66.1` trong `requirements.txt` cung cấp component API hai chiều. Kiểm thử adapter và nghiệp vụ bằng `python -X utf8 -m pytest -q --basetemp=.tmp/pytest-final` (coverage backend tối thiểu 90%); kiểm tra cú pháp JavaScript bằng `node --check frontend/app.js` với Node hỗ trợ ES modules.

@@ -78,6 +78,36 @@ def test_catalog_has_sku_product_median_smv_and_vnd_limits(monkeypatch):
     assert result["recommendation_limits"]["bonus"]["max"] <= 1000
 
 
+def _bonus_history(bonuses):
+    rows = [{"sku": "S1", "product": "Áo", "target": .8, "smv": 10.0, "workers": 10.0,
+             "overtime": 0, "bonus": float(b), "idle": 0, "actual": .5} for b in bonuses]
+    return pd.DataFrame(rows, columns=config.DATA_COLUMNS,
+                        index=pd.Index(range(2, 2 + len(rows)), name="excel_row"))
+
+
+def test_catalog_bonus_reports_typical_range_of_paid_shifts_not_the_outlier(monkeypatch):
+    record = _record(_bonus_history([0, 0, 1000, 2000, 3000, 4000, 100000]))
+    monkeypatch.setattr(services, "_get_dataset", lambda path=config.SOURCE: record)
+    bonus = services.get_catalog()["input_limits"]["bonus"]
+    assert bonus["max"] == 100000
+    assert bonus["typical"]["min"] == 2000
+    assert bonus["typical"]["max"] == 4000
+    assert bonus["typical"]["paid_share"] == pytest.approx(5 / 7)
+    assert "typical" not in services.get_catalog()["input_limits"]["overtime"]
+
+
+def test_catalog_bonus_has_no_typical_range_without_paid_shifts(monkeypatch):
+    record = _record(_bonus_history([0, 0, 0]))
+    monkeypatch.setattr(services, "_get_dataset", lambda path=config.SOURCE: record)
+    assert "typical" not in services.get_catalog()["input_limits"]["bonus"]
+
+
+def test_catalog_bonus_has_no_typical_range_for_empty_history(monkeypatch):
+    record = _record(_bonus_history([0, 1000]).iloc[:0])
+    monkeypatch.setattr(services, "_get_dataset", lambda path=config.SOURCE: record)
+    assert "typical" not in services.get_catalog()["input_limits"]["bonus"]
+
+
 def test_predict_shift_returns_ratio_status_and_batch_matches_single(frame, monkeypatch):
     record = _record(frame)
     bundle = _compatible_bundle(_DirectionalEstimator(), record["fingerprint"])

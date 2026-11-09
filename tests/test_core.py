@@ -227,8 +227,9 @@ def test_prediction_order_units_and_clipping(frame, bundle, row, monkeypatch):
         predict(bundle, row)
 
 
-def test_grouped_training_has_three_candidates_metrics_and_no_leakage(frame, bundle):
+def test_grouped_training_has_one_candidate_metrics_and_no_leakage(frame, bundle):
     metadata = bundle["metadata"]
+    assert config.MODELS == ("Linear Regression",)
     assert set(bundle["candidates"]) == set(config.MODELS)
     assert set(bundle["evaluations"]) == set(config.MODELS)
     assert metadata["train_rows"] + metadata["test_rows"] == len(frame)
@@ -262,23 +263,21 @@ def test_training_rejects_too_few_groups(frame):
         train(frame.iloc[:4])
 
 
-def test_selection_uses_cv_rmse_and_ties_follow_model_order(monkeypatch):
-    train_rows = pd.DataFrame({key: [float(i + 1) for i in range(10)] for key in config.FEATURES})
-    train_rows["actual"] = 0.
-    test_rows = pd.DataFrame({key: [float(i + 20) for i in range(3)] for key in config.FEATURES})
-    test_rows["actual"] = 1.
-    monkeypatch.setattr(model, "_ESTIMATORS", {
-        "Linear Regression": lambda: DummyRegressor(strategy="constant", constant=0.),
-        "Decision Tree": lambda: DummyRegressor(strategy="constant", constant=1.),
-        "Random Forest": lambda: DummyRegressor(strategy="constant", constant=0.),
-    })
-    result = model._fit_candidates(train_rows, test_rows, "identity", {})
-    assert result["selected_model"] == "Linear Regression"
-    assert result["evaluations"]["Decision Tree"]["test_rmse"] < result["evaluations"]["Linear Regression"]["test_rmse"]
-    assert result["evaluations"]["Linear Regression"]["cv_rmse_mean"] == result["evaluations"]["Random Forest"]["cv_rmse_mean"]
-    assert result["selected_model"] == min(
-        config.MODELS, key=lambda name: result["evaluations"][name]["cv_rmse_mean"]
-    )
+def test_only_linear_regression_is_trained_and_selected(bundle):
+    from sklearn.linear_model import LinearRegression
+
+    assert isinstance(bundle["model"], LinearRegression)
+    assert bundle["selected_model"] == bundle["algorithm"] == "Linear Regression"
+    assert set(bundle["candidates"]) == {"Linear Regression"}
+    assert set(bundle["training_config"]["estimators"]) == {"Linear Regression"}
+    assert bundle["metadata"]["r2"] == bundle["evaluations"]["Linear Regression"]["test_r2"]
+
+
+def test_bundle_of_another_algorithm_is_incompatible(bundle):
+    other = {**bundle, "metadata": {**bundle["metadata"], "selected_model": "Random Forest"}}
+    assert any("hồi quy tuyến tính" in error for error in model.compatibility_errors(other))
+    with pytest.raises(ValueError, match="cần huấn luyện model mới"):
+        predict(other, {key: 0 for key in config.FEATURES})
 
 
 def test_legacy_load_is_read_only_and_does_not_invent_scores(bundle, tmp_path):

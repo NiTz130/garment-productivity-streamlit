@@ -1,3 +1,19 @@
+// FONT_FACES do frontend_component.build_script() chèn phía trên; tệp nằm ở static/fonts.
+// @font-face không hoạt động trong shadow DOM, nên đăng ký bằng FontFace API ở cấp tài liệu, một lần cho mỗi trang.
+if (typeof FONT_FACES !== "undefined" && !window.__garmentFontsLoaded) {
+  window.__garmentFontsLoaded = true;
+  for (const spec of FONT_FACES) {
+    const url = new URL(`app/static/fonts/${spec.file}`, document.baseURI).href;
+    const face = new FontFace(spec.family, `url(${url})`, {
+      weight: spec.weight,
+      unicodeRange: spec.unicode_range,
+      display: "swap",
+    });
+    document.fonts.add(face);
+    face.load().catch(() => {});
+  }
+}
+
 let cachedCatalog = null;
 let catalogRequestSent = false;
 const runtimes = new WeakMap();
@@ -138,6 +154,8 @@ function clearResultForEdit(runtime) {
   element(root, "#result-message").className = "result-message is-pending";
   element(root, "#result-message").textContent = "Thông số đã thay đổi. Đang chờ cập nhật dự báo…";
   element(root, "#updated-at").hidden = true;
+  element(root, "#result-bar").hidden = true;
+  element(root, "#options-summary").hidden = true;
   element(root, "#option-grid").hidden = true;
   element(root, "#options-message").hidden = true;
   element(root, "#options-placeholder").hidden = false;
@@ -202,14 +220,20 @@ function attachEvents(runtime) {
       event.preventDefault();
       runtime.selectedOptionIndex = Math.max(runtime.selectedOptionIndex - 1, 0);
       updateOptionHighlight(runtime, options);
-    } else if (event.key === "Enter" && runtime.selectedOptionIndex >= 0 && options[runtime.selectedOptionIndex]) {
-      event.preventDefault();
-      options[runtime.selectedOptionIndex].click();
+    } else if (event.key === "Enter" && !element(root, "#product-options").hidden) {
+      const pick = options[runtime.selectedOptionIndex] ?? (options.length === 1 ? options[0] : null);
+      if (pick) {
+        event.preventDefault();
+        pick.click();
+      }
     } else if (event.key === "Escape") {
       closeProductOptions(runtime);
     }
   });
-  search.addEventListener("blur", () => setTimeout(() => closeProductOptions(runtime), 120));
+  search.addEventListener("blur", () => setTimeout(() => {
+    closeProductOptions(runtime);
+    restoreProductText(runtime);
+  }, 120));
 
   root.querySelectorAll("[data-page]").forEach((button) => {
     button.addEventListener("click", () => navigate(runtime, button.dataset.page));
@@ -232,6 +256,17 @@ function attachEvents(runtime) {
     const last = runtime.dashboardLastPage;
     if (page < last) sendEvent(runtime, "page", { page: page + 1 });
   });
+  const bonusArea = element(root, "#bonus-chart");
+  if (typeof ResizeObserver === "function") {
+    let lastWidth = 0;
+    new ResizeObserver(() => {
+      const width = Math.round(bonusArea.clientWidth);
+      if (width > 0 && Math.abs(width - lastWidth) > 8 && runtime.bonusRows) {
+        lastWidth = width;
+        renderBonusChart(runtime, runtime.bonusRows);
+      }
+    }).observe(bonusArea);
+  }
   root.addEventListener("pointermove", (event) => {
     const target = event.target.closest?.("[data-chart-index]");
     if (!target) return;
@@ -339,6 +374,15 @@ function updateOptionHighlight(runtime, options) {
   else element(runtime.root, "#product-search").removeAttribute("aria-activedescendant");
 }
 
+// Chữ lạ trong ô tìm kiếm không được lệch với mẫu hàng đang được tính.
+function restoreProductText(runtime) {
+  const search = element(runtime.root, "#product-search");
+  const item = (runtime.catalog || []).find((row) => row.key === runtime.selectedItemKey);
+  if (!item && runtime.selectedItemKey) return;
+  const expected = item ? `${item.sku} · ${item.product}` : "";
+  if (search.value !== expected) search.value = expected;
+}
+
 function closeProductOptions(runtime) {
   const list = element(runtime.root, "#product-options");
   list.hidden = true;
@@ -362,6 +406,11 @@ function selectProduct(runtime, item) {
 function renderLaborSummary(runtime, form) {
   const number = parseDraftNumber(form.full_shift_workers, true);
   const half = form.has_half_shift_worker;
+  if (number !== null && number < 0) {
+    setText(runtime.root, "#labor-summary", "Số người không được âm.");
+    setText(runtime.root, "#labor-converted", "Quy đổi: — lao động/ca");
+    return;
+  }
   if (number === null || !Number.isInteger(number)) {
     setText(runtime.root, "#labor-summary", form.full_shift_workers ? "Nhập số nguyên người cả ca" : "Nhập số người làm cả ca");
     setText(runtime.root, "#labor-converted", "Quy đổi: — lao động/ca");
@@ -400,8 +449,33 @@ function renderHeader(runtime, page) {
   });
 }
 
+function renderRanges(runtime, data) {
+  const limits = data.input_limits || {};
+  const labor = data.labor_entry || {};
+  const show = (selector, min, max, suffix) => {
+    if (finite(min) === null || finite(max) === null) return;
+    setText(runtime.root, selector, `Cho phép ${moneyFormatter.format(min)}–${moneyFormatter.format(max)}${suffix}`);
+  };
+  show("#range-target", finite(limits.target?.min) === null ? null : limits.target.min * 100,
+    finite(limits.target?.max) === null ? null : limits.target.max * 100, "%");
+  show("#range-workers", labor.full_shift_workers_min, labor.full_shift_workers_max_without_half, " người");
+  show("#range-overtime", limits.overtime?.min, limits.overtime?.max, " phút");
+  show("#range-idle", limits.idle?.min, limits.idle?.max, " phút");
+  show("#range-bonus", limits.bonus?.min, limits.bonus?.max, " VNĐ");
+  const typical = limits.bonus?.typical;
+  const typicalLow = finite(typical?.min);
+  const typicalHigh = finite(typical?.max);
+  const paidShare = finite(typical?.paid_share);
+  const hint = element(runtime.root, "#typical-bonus");
+  hint.hidden = typicalLow === null || typicalHigh === null || paidShare === null;
+  if (!hint.hidden) {
+    hint.textContent = `Thường gặp ${moneyFormatter.format(typicalLow)}–${moneyFormatter.format(typicalHigh)} VNĐ khi có thưởng. ${Math.round(paidShare * 100)}% ca có thưởng.`;
+  }
+}
+
 function renderForecast(runtime, data, current) {
   const root = runtime.root;
+  renderRanges(runtime, data);
   const form = data.form || {};
   const serverRevision = finite(data.revision) ?? finite(data.prediction_revision) ?? 0;
   runtime.serverRevision = serverRevision;
@@ -426,7 +500,7 @@ function renderForecast(runtime, data, current) {
     runtime.serverForm = form;
     renderLaborSummary(runtime, collectForm(runtime));
     renderFieldErrors(runtime, current && data.prediction_revision === runtime.localRevision ? data.prediction_errors : {});
-    renderProductOptions(runtime, element(root, "#product-search").value, false);
+    renderProductOptions(runtime, element(root, "#product-search").value, !element(root, "#product-options").hidden);
   } else {
     renderFieldErrors(runtime, {});
   }
@@ -460,10 +534,12 @@ function renderPrediction(runtime, data, status, prediction, isStale) {
   const message = element(root, "#result-message");
   const updated = element(root, "#updated-at");
   const noProduct = status === "no_product" || (!data.selected_item_key && status !== "pending");
+  const bar = element(root, "#result-bar");
   block.hidden = true;
   updated.hidden = true;
   message.hidden = true;
   empty.hidden = true;
+  bar.hidden = true;
 
   if (status === "success" && prediction) {
     empty.hidden = true;
@@ -477,6 +553,12 @@ function renderPrediction(runtime, data, status, prediction, isStale) {
     const target = finite(prediction.inputs?.target);
     const gap = finite(prediction.difference_to_target);
     setText(root, "#prediction-value", formatPercent(value));
+    element(root, "#prediction-value").className = `prediction-value numeric${prediction.achieved ? "" : " is-below"}`;
+    bar.hidden = false;
+    setText(root, "#bar-value", formatPercent(value));
+    const barStatus = element(root, "#bar-status");
+    barStatus.className = `status-chip${prediction.achieved ? "" : " is-below"}`;
+    barStatus.textContent = prediction.achieved ? "Đạt" : "Chưa đạt";
     const chip = element(root, "#prediction-status");
     chip.className = `status-chip${prediction.achieved ? "" : " is-below"}`;
     chip.textContent = prediction.achieved ? "✓ Đạt mục tiêu" : "! Chưa đạt mục tiêu";
@@ -495,7 +577,7 @@ function renderPrediction(runtime, data, status, prediction, isStale) {
       trendElement.className = "numeric is-neutral";
     } else {
       trendElement.textContent = `${trend > 0 ? "↑" : "↓"} ${signed(trend * 100, 1)} điểm %`;
-      trendElement.className = `numeric ${trend > 0 ? "is-positive" : "is-negative"}`;
+      trendElement.className = "numeric is-neutral";
     }
     const width = value === null ? 0 : Math.max(0, Math.min(value * 100, 100));
     const targetPosition = target === null ? 0 : Math.max(0, Math.min(target * 100, 100));
@@ -507,7 +589,7 @@ function renderPrediction(runtime, data, status, prediction, isStale) {
     element(root, "#progress-track").setAttribute("aria-label", `Năng suất ${formatPercent(value)}, mục tiêu ${formatPercent(target)}`);
     const note = element(root, "#prediction-note");
     note.hidden = !prediction.clipped;
-    note.textContent = prediction.clipped ? "Dự báo gốc dưới 0%; backend đã giới hạn kết quả hiển thị về 0%." : "";
+    note.textContent = prediction.clipped ? "Dự báo gốc dưới 0%; kết quả được hiển thị là 0%." : "";
     if (runtime.predictionReceivedAt) {
       updated.hidden = false;
       updated.textContent = `Nhận lúc ${new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(runtime.predictionReceivedAt)}`;
@@ -556,8 +638,10 @@ function renderOptions(runtime, data, status, prediction, stale) {
   const placeholder = element(root, "#options-placeholder");
   const grid = element(root, "#option-grid");
   const message = element(root, "#options-message");
+  const summary = element(root, "#options-summary");
   grid.hidden = true;
   message.hidden = true;
+  summary.hidden = true;
   if (status === "success" && prediction?.achieved && !stale) {
     placeholder.hidden = false;
     placeholder.textContent = "Ca đã đạt mục tiêu; không cần tăng thông số.";
@@ -571,7 +655,7 @@ function renderOptions(runtime, data, status, prediction, stale) {
   const recStatus = data.recommendation_status;
   if (recStatus === "waiting" || recStatus === "loading") {
     placeholder.hidden = false;
-    placeholder.textContent = "Đang tìm phương án trong giới hạn backend…";
+    placeholder.textContent = "Đang tìm phương án trong giới hạn vận hành…";
     return;
   }
   if (recStatus === "error") {
@@ -597,11 +681,39 @@ function renderOptions(runtime, data, status, prediction, stale) {
   for (const optionId of ["workers", "overtime", "combined"]) {
     const option = options.find((row) => row.id === optionId);
     if (!option) continue;
-    grid.appendChild(buildOptionCard(option, titles[optionId], optionId === "combined"));
+    grid.appendChild(buildOptionCard(runtime, option, titles[optionId], optionId === "combined"));
+  }
+  const usable = options.filter((row) => row.available && row.status !== "unavailable" && finite(row.prediction?.value) !== null);
+  if (usable.length) {
+    const reached = usable.filter((row) => row.achieved);
+    if (reached.length) {
+      summary.textContent = `${reached.length} trong ${usable.length} phương án đạt mục tiêu.`;
+    } else {
+      const best = usable.reduce((a, b) => (b.prediction.value > a.prediction.value ? b : a));
+      const shortfall = finite(best.difference_to_target);
+      summary.textContent = `Chưa phương án nào đạt mục tiêu. Cao nhất: ${formatPercent(best.prediction.value)}`
+        + (shortfall === null ? "." : ` (thiếu ${formatNumber(Math.abs(shortfall * 100), 1)} điểm %).`);
+    }
+    summary.hidden = false;
   }
 }
 
-function buildOptionCard(option, titleInfo, featured) {
+// Chép phương án vào biểu mẫu để dự báo lại đúng theo phương án đó.
+function applyOption(runtime, option) {
+  const root = runtime.root;
+  const workers = finite(option.inputs?.workers);
+  const overtime = finite(option.inputs?.overtime);
+  const bonus = finite(option.inputs?.bonus);
+  if (workers === null || overtime === null || bonus === null) return;
+  const whole = Math.floor(workers);
+  element(root, "#workers-input").value = String(whole);
+  element(root, "#half-shift-input").checked = workers - whole >= 0.5 - 1e-9;
+  element(root, "#overtime-input").value = String(Math.round(overtime));
+  element(root, "#bonus-input").value = String(Math.round(bonus));
+  markFormChanged(runtime, true);
+}
+
+function buildOptionCard(runtime, option, titleInfo, featured) {
   const card = document.createElement("article");
   card.className = `option-card${featured ? " is-featured" : ""}`;
   const top = document.createElement("div");
@@ -629,7 +741,7 @@ function buildOptionCard(option, titleInfo, featured) {
   if (!option.available || option.status === "unavailable") {
     const reason = document.createElement("p");
     reason.className = "option-reason";
-    reason.textContent = option.reason || "Backend không trả phương án khả dụng trong giới hạn hiện tại.";
+    reason.textContent = option.reason || "Không có phương án khả dụng trong giới hạn hiện tại.";
     card.appendChild(reason);
     return card;
   }
@@ -688,10 +800,12 @@ function buildOptionCard(option, titleInfo, featured) {
   else gap.textContent = `Vượt mục tiêu ${formatNumber(difference * 100, 1)} điểm %.`;
   card.appendChild(gap);
 
-  const reason = document.createElement("p");
-  reason.className = "option-reason";
-  reason.textContent = option.achieved ? "Đạt mục tiêu trong phạm vi tìm kiếm của backend." : "Cải thiện nhưng chưa đạt mục tiêu trong phạm vi tìm kiếm.";
-  card.appendChild(reason);
+  const apply = document.createElement("button");
+  apply.type = "button";
+  apply.className = "option-apply";
+  apply.textContent = "Áp dụng vào biểu mẫu";
+  apply.addEventListener("click", () => applyOption(runtime, option));
+  card.appendChild(apply);
   return card;
 }
 
@@ -787,6 +901,7 @@ function renderComparisonChart(runtime, rows) {
   const area = element(root, "#comparison-chart");
   const empty = element(root, "#comparison-empty");
   area.replaceChildren();
+  element(root, "#chart-tooltip").hidden = true;
   const validRows = rows.filter((row) => finite(row.target_mean) !== null || finite(row.actual_mean) !== null);
   empty.hidden = validRows.length > 0;
   if (!validRows.length) return;
@@ -796,107 +911,91 @@ function renderComparisonChart(runtime, rows) {
     ? `10 sản phẩm có nhiều quan sát nhất trong ${formatNumber(validRows.length, 0)} sản phẩm.`
     : `So sánh năng suất trung bình theo ${formatNumber(validRows.length, 0)} sản phẩm.`);
 
-  const width = 720, height = 292;
-  const margin = { top: 12, right: 12, bottom: 57, left: 48 };
-  const plotWidth = width - margin.left - margin.right;
-  const plotHeight = height - margin.top - margin.bottom;
-  const maximumValue = Math.max(1, ...visible.flatMap((row) => [finite(row.target_mean) ?? 0, finite(row.actual_mean) ?? 0]));
-  const maximum = Math.ceil(maximumValue * 4) / 4;
-  const svg = svgNode("svg", { viewBox: `0 0 ${width} ${height}`, role: "group", "aria-label": "So sánh năng suất trung bình mục tiêu và thực tế" });
-  for (let tick = 0; tick <= 4; tick += 1) {
-    const value = maximum * tick / 4;
-    const y = margin.top + plotHeight * (1 - tick / 4);
-    svg.appendChild(svgNode("line", { x1: margin.left, x2: width - margin.right, y1: y, y2: y, class: "grid-line" }));
-    const label = svgNode("text", { x: margin.left - 7, y: y + 3, "text-anchor": "end", class: "axis-label" });
-    label.textContent = `${formatNumber(value * 100, 0)}%`;
-    svg.appendChild(label);
-  }
-  svg.appendChild(svgNode("line", { x1: margin.left, x2: width - margin.right, y1: margin.top + plotHeight, y2: margin.top + plotHeight, class: "axis-line" }));
-  const groupWidth = plotWidth / visible.length;
-  const barWidth = Math.min(22, groupWidth * .27);
+  const maximum = Math.max(1, ...visible.flatMap((row) => [finite(row.target_mean) ?? 0, finite(row.actual_mean) ?? 0]));
+  const list = document.createElement("div");
+  list.className = "bar-list";
   visible.forEach((row, index) => {
-    const center = margin.left + groupWidth * (index + .5);
-    const bars = [["target_mean", "#94a3b8", -barWidth * .56], ["actual_mean", "#0f766e", barWidth * .56]];
-    for (const [field, color, offset] of bars) {
+    const item = document.createElement("div");
+    item.className = "bar-row";
+    item.tabIndex = 0;
+    item.setAttribute("role", "img");
+    item.dataset.chartIndex = `product-${index}`;
+    item.setAttribute("aria-label", `${row.product}: mục tiêu trung bình ${formatPercent(row.target_mean)}, thực tế trung bình ${formatPercent(row.actual_mean)}, ${formatNumber(row.observations, 0)} quan sát`);
+    const name = document.createElement("div");
+    name.className = "row-label";
+    name.textContent = String(row.product ?? "");
+    const pair = document.createElement("div");
+    pair.className = "bar-pair";
+    for (const [field, kind, label] of [["target_mean", "is-target", "Mục tiêu"], ["actual_mean", "is-actual", "Thực tế"]]) {
       const value = finite(row[field]);
-      if (value === null) continue;
-      const barHeight = Math.max(0, (value / maximum) * plotHeight);
-      const rect = svgNode("rect", {
-        x: center + offset - barWidth / 2,
-        y: margin.top + plotHeight - barHeight,
-        width: barWidth,
-        height: barHeight,
-        rx: 2,
-        fill: color,
-        class: "data-bar",
-        tabindex: 0,
-        "data-chart-index": `product-${index}`,
-        "data-chart-series": field,
-        "aria-label": `${row.product}, ${field === "target_mean" ? "năng suất mục tiêu trung bình" : "năng suất thực tế trung bình"} ${formatPercent(value)}, ${formatNumber(row.observations, 0)} quan sát`,
-      });
-      const title = svgNode("title");
-      title.textContent = `${row.product} · ${field === "target_mean" ? "Mục tiêu TB" : "Thực tế TB"}: ${formatPercent(value)} · ${formatNumber(row.observations, 0)} quan sát`;
-      rect.appendChild(title);
-      svg.appendChild(rect);
+      const track = document.createElement("div");
+      track.className = "bar-track";
+      const lane = document.createElement("span");
+      lane.className = "bar-lane";
+      const fill = document.createElement("span");
+      fill.className = `bar-fill ${kind}`;
+      fill.style.width = `${value === null ? 0 : Math.max(0, Math.min(value / maximum * 100, 100))}%`;
+      lane.appendChild(fill);
+      const text = document.createElement("span");
+      text.className = "bar-value";
+      text.textContent = `${label} ${formatPercent(value)}`;
+      track.append(lane, text);
+      pair.appendChild(track);
     }
-    const productLabel = String(row.product ?? "");
-    const label = svgNode("text", { x: center, y: height - 27, "text-anchor": "middle", class: "axis-label" });
-    label.textContent = productLabel.length > 15 ? `${productLabel.slice(0, 14)}…` : productLabel;
-    label.setAttribute("aria-label", productLabel);
-    svg.appendChild(label);
+    item.append(name, pair);
+    list.appendChild(item);
   });
   runtime.pendingChartData = { productComparison: visible };
-  area.appendChild(svg);
+  area.appendChild(list);
 }
 
 function renderBonusChart(runtime, rows) {
   const root = runtime.root;
   const area = element(root, "#bonus-chart");
   const empty = element(root, "#bonus-empty");
+  runtime.bonusRows = rows;
   area.replaceChildren();
+  element(root, "#chart-tooltip").hidden = true;
   const points = rows.filter((row) => finite(row.bonus) !== null && finite(row.actual) !== null && finite(row.target) !== null);
   empty.hidden = points.length > 0;
   if (!points.length) return;
-  const width = 720, height = 292;
-  const margin = { top: 13, right: 13, bottom: 47, left: 48 };
+  // Vẽ theo bề rộng thật của khung để chữ giữ nguyên 13px, không bị co theo viewBox.
+  const width = area.clientWidth > 0 ? Math.max(300, Math.round(area.clientWidth)) : 720;
+  const height = width < 500 ? 260 : 292;
+  const margin = { top: 13, right: 14, bottom: 40, left: 50 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
-  const xMaxValue = Math.max(1, ...points.map((point) => finite(point.bonus)));
-  const xMax = niceMaximum(xMaxValue);
+  const xMax = niceMaximum(Math.max(1, ...points.map((point) => finite(point.bonus))));
   const yMax = niceMaximum(Math.max(1, ...points.flatMap((point) => [finite(point.actual), finite(point.target)])));
-  const svg = svgNode("svg", { viewBox: `0 0 ${width} ${height}`, role: "group", "aria-label": "Phân bố tiền thưởng theo năng suất thực tế" });
+  const svg = svgNode("svg", {
+    viewBox: `0 0 ${width} ${height}`, role: "img",
+    "aria-label": "Biểu đồ phân tán tiền thưởng và năng suất thực tế. Xem bảng tra cứu bên dưới để đọc từng ca.",
+  });
   for (let tick = 0; tick <= 4; tick += 1) {
     const yValue = yMax * tick / 4;
     const y = margin.top + plotHeight * (1 - tick / 4);
     svg.appendChild(svgNode("line", { x1: margin.left, x2: width - margin.right, y1: y, y2: y, class: "grid-line" }));
-    const label = svgNode("text", { x: margin.left - 7, y: y + 3, "text-anchor": "end", class: "axis-label" });
+    const label = svgNode("text", { x: margin.left - 7, y: y + 4, "text-anchor": "end", class: "axis-label" });
     label.textContent = `${formatNumber(yValue * 100, 0)}%`;
     svg.appendChild(label);
-    const xValue = xMax * tick / 4;
+    const xValue = xMax * (tick / 4) ** 2;
     const x = margin.left + plotWidth * tick / 4;
     svg.appendChild(svgNode("line", { x1: x, x2: x, y1: margin.top, y2: margin.top + plotHeight, class: "grid-line" }));
-    const xLabel = svgNode("text", { x, y: height - 24, "text-anchor": "middle", class: "axis-label" });
+    const xLabel = svgNode("text", { x, y: height - 14, "text-anchor": "middle", class: "axis-label" });
     xLabel.textContent = compactMoney(xValue);
     svg.appendChild(xLabel);
   }
   svg.appendChild(svgNode("line", { x1: margin.left, x2: width - margin.right, y1: margin.top + plotHeight, y2: margin.top + plotHeight, class: "axis-line" }));
   points.forEach((point, index) => {
     const xValue = finite(point.bonus), actual = finite(point.actual), target = finite(point.target);
-    if (xValue === null || actual === null || target === null) return;
-    const x = margin.left + (xValue / xMax) * plotWidth;
+    const x = margin.left + Math.sqrt(xValue / xMax) * plotWidth;
     const y = margin.top + plotHeight * (1 - actual / yMax);
-    const circle = svgNode("circle", {
-      cx: x, cy: y, r: 3.6,
-      fill: actual >= target ? "#167b70" : "#c64b4b",
-      class: "data-point",
-      tabindex: 0,
-      "data-chart-index": `bonus-${index}`,
-      "aria-label": `${point.product}, tiền thưởng ${moneyFormatter.format(xValue)} VNĐ, mục tiêu ${formatPercent(target)}, thực tế ${formatPercent(actual)}`,
-    });
-    const title = svgNode("title");
-    title.textContent = `${point.product} · Thưởng ${moneyFormatter.format(xValue)} VNĐ · Mục tiêu ${formatPercent(target)} · Thực tế ${formatPercent(actual)}`;
-    circle.appendChild(title);
-    svg.appendChild(circle);
+    const common = { class: "data-point", "data-chart-index": `bonus-${index}` };
+    if (actual >= target) {
+      svg.appendChild(svgNode("circle", { ...common, cx: x, cy: y, r: 3.6, fill: "#0f766e", class: "data-point is-achieved" }));
+    } else {
+      svg.appendChild(svgNode("path", { ...common, d: `M${x} ${y - 4.6}L${x + 4.2} ${y + 3.4}L${x - 4.2} ${y + 3.4}Z`, fill: "#b91c1c", class: "data-point is-missed" }));
+    }
   });
   runtime.pendingChartData = { ...(runtime.pendingChartData || {}), bonusPoints: points };
   area.appendChild(svg);

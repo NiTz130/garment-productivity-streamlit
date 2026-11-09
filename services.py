@@ -184,6 +184,15 @@ def get_catalog() -> dict:
         elif field in config.INTEGER_INPUTS:
             fields[field]["step"] = 1
 
+    # Giới hạn bonus bị kéo dài bởi vài ca ngoại lai; nửa giữa các ca có thưởng cho khoảng thực tế.
+    paid = valid["bonus"][valid["bonus"] > 0]
+    if len(paid):
+        fields["bonus"]["typical"] = {
+            "min": math.floor(paid.quantile(.25)),
+            "max": math.ceil(paid.quantile(.75)),
+            "paid_share": len(paid) / len(valid),
+        }
+
     return {
         "items": items,
         "input_limits": fields,

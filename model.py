@@ -13,23 +13,15 @@ import tempfile
 
 import joblib
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import GroupKFold, GroupShuffleSplit
-from sklearn.tree import DecisionTreeRegressor
 
 import config
 from data import dataset_fingerprint, quality_report, validate
 
 
-_ESTIMATORS = {
-    "Linear Regression": lambda: LinearRegression(),
-    "Decision Tree": lambda: DecisionTreeRegressor(**config.TRAINING_CONFIG["estimators"]["Decision Tree"]["params"]),
-    "Random Forest": lambda: RandomForestRegressor(
-        **config.TRAINING_CONFIG["estimators"]["Random Forest"]["params"]
-    ),
-}
+_ESTIMATORS = {"Linear Regression": lambda: LinearRegression()}
 
 
 def _group_ids(df: pd.DataFrame) -> list[str]:
@@ -153,7 +145,7 @@ def _fit_candidates(train_df: pd.DataFrame, test_df: pd.DataFrame,
 
 
 def train(df: pd.DataFrame, dataset_hash: str | None = None) -> dict:
-    """Train and compare all candidates using grouped holdout and grouped CV."""
+    """Train linear regression using grouped holdout and grouped CV."""
     source = _validated_frame(df)
     groups = _group_ids(source)
     unique_groups = len(set(groups))
@@ -197,6 +189,9 @@ def compatibility_errors(bundle: dict) -> list[str]:
         return ["gói mô hình không hợp lệ"]
     metadata = bundle.get("metadata") or {}
     errors = []
+    algorithm = metadata.get("selected_model", bundle.get("selected_model"))
+    if algorithm is not None and algorithm not in config.MODELS:
+        errors.append("thuật toán (hệ thống chỉ dùng hồi quy tuyến tính)")
     if metadata.get("schema_version") != config.SCHEMA_VERSION:
         errors.append("phiên bản schema đầu vào")
     if metadata.get("bonus_unit") != config.BONUS_UNIT:

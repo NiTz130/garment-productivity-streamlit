@@ -1,4 +1,2 @@
-[browser]
-gatherUsageStats = false
 [server]
-headless = true
+enableStaticServing = true

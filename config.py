@@ -3,8 +3,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 
 def dataset_path(root: Path) -> Path:
-    original = root.parent / "Bộ dữ liệu - Nhóm 6.xlsx"
-    return original if original.exists() else root / "dataset" / original.name
+    # Chỉ dùng dataset VNĐ đóng gói; tệp NDT gốc ở thư mục cha chỉ để đối chiếu hash.
+    return root / "dataset" / "Bộ dữ liệu - Nhóm 6.xlsx"
 
 
 SOURCE = dataset_path(ROOT)
@@ -26,7 +26,7 @@ SOURCE_TO_INTERNAL = dict(zip(SOURCE_COLUMNS, [
 ]))
 DATA_COLUMNS = list(SOURCE_TO_INTERNAL.values())
 NUMERIC_COLUMNS = FEATURES + ["actual"]
-MODELS = ("Linear Regression", "Decision Tree", "Random Forest")
+MODELS = ("Linear Regression",)
 TRAINING_CONFIG = {
     "test_size": 0.2,
     "random_state": 42,
@@ -34,12 +34,6 @@ TRAINING_CONFIG = {
     "group_features": FEATURES.copy(),
     "estimators": {
         "Linear Regression": {"class": "LinearRegression", "params": {}},
-        "Decision Tree": {"class": "DecisionTreeRegressor", "params": {
-            "max_depth": 8, "min_samples_leaf": 5, "random_state": 42,
-        }},
-        "Random Forest": {"class": "RandomForestRegressor", "params": {
-            "n_estimators": 200, "min_samples_leaf": 2, "random_state": 42, "n_jobs": 1,
-        }},
     },
 }
 MODEL_FORMAT_VERSION = 3

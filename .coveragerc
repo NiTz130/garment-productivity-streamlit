@@ -1,5 +1,5 @@
 [run]
-source = config,data,analysis,model,services
+source = config,data,analysis,model,services,ui_adapter,frontend_component,app
 omit = tests/*
 [report]
 fail_under = 90

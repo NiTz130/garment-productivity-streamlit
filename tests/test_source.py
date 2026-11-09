@@ -27,7 +27,8 @@ def test_dataset_path_for_local_and_clean_clone(tmp_path,original_exists,bundled
     if bundled_exists:
         bundled.parent.mkdir()
         bundled.write_bytes(b'bundled')
-    assert config.dataset_path(project) == (original if original_exists else bundled)
+    # Tệp Excel ở thư mục cha (bản NDT gốc) không được ghi đè dataset VNĐ đóng gói.
+    assert config.dataset_path(project) == bundled
     if not original_exists and not bundled_exists:
         from data import load_data
         with pytest.raises(FileNotFoundError): load_data(config.dataset_path(project))

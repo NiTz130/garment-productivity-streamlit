@@ -4,7 +4,7 @@
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24" focusable="false"><path d="M4 18.5h16M6 18V8.4l4.2-2.1 2.2 2.2 3.4-1.7 2.2 2.2V18M8.3 10.2h2.4m3.1-1.3 2.1 2.1m-7.5 2.4h2.4m3.1-2.2 2.1 2.1M4 5.2h5.4l1.5 1.5"/></svg>
       </span>
-      <span class="brand-copy"><strong>Năng suất chuyền may</strong><small>Garment Line Analytics</small></span>
+      <span class="brand-copy"><strong>Năng suất chuyền may</strong></span>
     </a>
     <nav class="main-nav" aria-label="Điều hướng chính">
       <button class="nav-tab is-active" type="button" data-page="forecast" aria-current="page">Dự báo &amp; ra quyết định</button>
@@ -42,18 +42,18 @@
           <div class="field-group">
             <div class="label-line"><label for="smv-display">Định mức SMV chuẩn</label><span class="quiet-label">Từ danh mục dữ liệu</span></div>
             <div class="readonly-input"><output id="smv-display">—</output><span>phút / sản phẩm</span></div>
-            <p class="field-help" id="smv-help" hidden>Mẫu hàng có nhiều SMV trong lịch sử; đang dùng giá trị đại diện backend trả về.</p>
+            <p class="field-help" id="smv-help" hidden>Mẫu hàng có nhiều SMV trong lịch sử; đang dùng giá trị đại diện.</p>
           </div>
 
           <div class="field-group">
-            <label for="target-input">Mục tiêu năng suất</label>
+            <div class="label-line"><label for="target-input">Mục tiêu năng suất</label><span class="range-hint" id="range-target"></span></div>
             <div class="input-with-unit"><input id="target-input" data-form-field="target" type="text" inputmode="decimal" autocomplete="off" placeholder="Ví dụ: 80" aria-describedby="error-target"><span>%</span></div>
             <p class="field-error" id="error-target" aria-live="polite"></p>
           </div>
 
           <fieldset class="labor-box">
             <legend>Nhân công</legend>
-            <label for="workers-input">Số người làm cả ca</label>
+            <div class="label-line"><label for="workers-input">Số người làm cả ca</label><span class="range-hint" id="range-workers"></span></div>
             <div class="input-with-unit"><input id="workers-input" data-form-field="full_shift_workers" type="text" inputmode="numeric" autocomplete="off" placeholder="Số nguyên" aria-describedby="error-full_shift_workers"><span>người</span></div>
             <p class="field-error" id="error-full_shift_workers" aria-live="polite"></p>
             <label class="check-row" for="half-shift-input"><input id="half-shift-input" data-form-field="has_half_shift_worker" type="checkbox"><span>Thêm 1 người làm nửa ca</span></label>
@@ -62,23 +62,24 @@
 
           <div class="paired-fields">
             <div class="field-group">
-              <label for="overtime-input">Tổng tăng ca</label>
+              <div class="label-line"><label for="overtime-input">Tổng tăng ca</label><span class="range-hint" id="range-overtime"></span></div>
               <div class="input-with-unit"><input id="overtime-input" data-form-field="overtime" type="text" inputmode="numeric" autocomplete="off" placeholder="0 hợp lệ" aria-describedby="error-overtime"><span>phút</span></div>
               <p class="field-error" id="error-overtime" aria-live="polite"></p>
             </div>
             <div class="field-group">
-              <label for="idle-input">Máy dừng</label>
+              <div class="label-line"><label for="idle-input">Máy dừng</label><span class="range-hint" id="range-idle"></span></div>
               <div class="input-with-unit"><input id="idle-input" data-form-field="idle" type="text" inputmode="numeric" autocomplete="off" placeholder="0 hợp lệ" aria-describedby="error-idle"><span>phút</span></div>
               <p class="field-error" id="error-idle" aria-live="polite"></p>
             </div>
           </div>
 
           <div class="field-group bonus-field">
-            <label for="bonus-input">Tiền thưởng</label>
-            <div class="input-with-unit"><input id="bonus-input" data-form-field="bonus" type="text" inputmode="numeric" autocomplete="off" placeholder="VNĐ nguyên" aria-describedby="error-bonus"><span>VNĐ</span></div>
+            <div class="label-line"><label for="bonus-input">Tiền thưởng</label><span class="range-hint" id="range-bonus"></span></div>
+            <div class="input-with-unit"><input id="bonus-input" data-form-field="bonus" type="text" inputmode="numeric" autocomplete="off" placeholder="VNĐ nguyên" aria-describedby="typical-bonus error-bonus"><span>VNĐ</span></div>
+            <p class="field-help" id="typical-bonus" hidden></p>
             <p class="field-error" id="error-bonus" aria-live="polite"></p>
           </div>
-          <p class="input-footnote">Các giá trị phải nằm trong giới hạn vận hành của dữ liệu nguồn.</p>
+          <p class="input-footnote">Mục tiêu là một đầu vào của mô hình dự báo, nên đổi mục tiêu cũng đổi kết quả dự báo.</p>
         </section>
 
         <div class="forecast-results">
@@ -114,23 +115,25 @@
 
           <section class="card options-section" id="options-section" aria-labelledby="options-title">
             <div class="card-heading options-heading">
-              <div><p class="eyebrow">HƯỚNG ĐIỀU CHỈNH</p><h2 id="options-title">Phương án gỡ vướng</h2><p class="muted" id="options-caption">Các hướng được tìm trong giới hạn backend cung cấp.</p></div>
+              <div><p class="eyebrow">HƯỚNG ĐIỀU CHỈNH</p><h2 id="options-title">Phương án gỡ vướng</h2><p class="muted" id="options-caption">Các hướng được tìm trong giới hạn vận hành của dữ liệu.</p></div>
               <span class="options-icon" aria-hidden="true">⌁</span>
             </div>
             <div class="options-content" id="options-content" aria-live="off">
               <p class="options-placeholder" id="options-placeholder">Phương án sẽ xuất hiện khi dự báo cho thấy ca chưa đạt mục tiêu.</p>
+              <p class="options-summary" id="options-summary" hidden></p>
               <div class="option-grid" id="option-grid" hidden></div>
               <p class="options-message" id="options-message" hidden></p>
             </div>
           </section>
         </div>
       </div>
+      <div class="result-bar" id="result-bar" hidden><span class="bar-caption">Dự báo</span><strong class="numeric" id="bar-value">—</strong><span class="status-chip" id="bar-status"></span></div>
     </section>
 
     <section class="page-view" id="management-page" aria-labelledby="management-title" hidden>
       <div class="page-heading management-heading">
         <div><p class="eyebrow">QUẢN TRỊ / BÁO CÁO HIỆU SUẤT</p><h1 id="management-title">Thống kê quản trị</h1></div>
-        <p class="heading-note">Tổng hợp từ các bản ghi hợp lệ trong workbook nguồn.</p>
+        <p class="heading-note">Tổng hợp từ các bản ghi hợp lệ trong dữ liệu nguồn.</p>
       </div>
 
       <section class="filter-bar" aria-label="Bộ lọc thống kê">
@@ -155,7 +158,7 @@
           <p class="chart-empty" id="comparison-empty" hidden>Không có dữ liệu sản phẩm trong bộ lọc này.</p>
         </article>
         <article class="card chart-card">
-          <div class="chart-heading"><div><h2>Tiền thưởng và năng suất</h2><p class="muted">Mỗi điểm là một ca; trục ngang là tiền thưởng VNĐ.</p></div><div class="legend"><span><i class="legend-dot achieved-dot"></i>Đạt mục tiêu</span><span><i class="legend-dot missed-dot"></i>Chưa đạt</span></div></div>
+          <div class="chart-heading"><div><h2>Tiền thưởng và năng suất</h2><p class="muted">Mỗi điểm là một ca; trục ngang là tiền thưởng VNĐ, theo thang căn bậc hai.</p></div><div class="legend"><span><i class="legend-dot achieved-dot"></i>Đạt mục tiêu</span><span><i class="legend-dot missed-dot"></i>Chưa đạt (tam giác)</span></div></div>
           <div class="chart-area" id="bonus-chart" role="group" aria-label="Biểu đồ phân tán tiền thưởng và năng suất thực tế"></div>
           <p class="chart-empty" id="bonus-empty" hidden>Không có điểm dữ liệu trong bộ lọc này.</p>
           <p class="chart-footnote">Tiền thưởng theo ca; không đại diện cho tổng chi phí sản xuất.</p>
