@@ -19,11 +19,11 @@ CATALOG = {
     },
     "labor_entry": {
         "full_shift_workers_min": 2,
-        "full_shift_workers_max_without_half": 89,
-        "full_shift_workers_max_with_half": 88,
+        "half_shift_workers_min": 0,
+        "converted_workers_max": 89,
     },
 }
-FORM = {"target": "80", "full_shift_workers": "30", "has_half_shift_worker": False,
+FORM = {"target": "80", "full_shift_workers": "30", "half_shift_workers": "0",
         "overtime": "0", "bonus": "0", "idle": "0"}
 
 
@@ -69,15 +69,15 @@ def test_apply_form_event_rejects_stale_or_malformed(app, state):
 
 
 def test_apply_form_event_ignores_unchanged_form(app, state):
-    assert app._apply_form_event(state, {"revision": 0, "form": {}}) is False
+    assert app._apply_form_event(state, {"revision": 0, "form": dict(state["form"])}) is False
 
 
 def test_apply_form_event_sets_item_and_smv(app, state):
-    event = {"revision": 1, "item_key": "k1", "form": {**FORM, "has_half_shift_worker": True}}
+    event = {"revision": 1, "item_key": "k1", "form": {**FORM, "half_shift_workers": "3"}}
     assert app._apply_form_event(state, event) is True
     assert state["selected_item_key"] == "k1"
     assert state["form"]["smv"] == "18.5"
-    assert state["form"]["has_half_shift_worker"] is True
+    assert state["form"]["half_shift_workers"] == "3"
     assert state["revision"] == 1
 
 
@@ -282,3 +282,9 @@ def test_component_event_callback_reads_mapping_or_attribute(app, monkeypatch):
     session[app._STATE_KEY] = "không phải dict"
     app._on_component_event()
     assert seen == ["từ-dict", "từ-thuộc-tính"]
+
+
+def test_new_state_defaults_numeric_inputs_to_zero_but_not_workers(app):
+    form = app._new_state()["form"]
+    assert {form[k] for k in ("target", "overtime", "bonus", "idle")} == {"0"}
+    assert form["full_shift_workers"] == "" and form["half_shift_workers"] == ""

@@ -26,12 +26,6 @@ function element(root, selector) {
   return root.querySelector(selector);
 }
 
-function svgNode(name, attributes = {}) {
-  const node = document.createElementNS("http://www.w3.org/2000/svg", name);
-  for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value));
-  return node;
-}
-
 function finite(value) {
   if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
@@ -79,7 +73,7 @@ function parseDraftNumber(raw, integerField = false) {
 
 function equivalentDraft(left, right, field) {
   if (String(left ?? "") === String(right ?? "")) return true;
-  const integer = ["full_shift_workers", "overtime", "bonus", "idle"].includes(field);
+  const integer = ["full_shift_workers", "half_shift_workers", "overtime", "bonus", "idle"].includes(field);
   const first = parseDraftNumber(left, integer);
   const second = parseDraftNumber(right, integer);
   return first !== null && second !== null && first === second;
@@ -139,7 +133,7 @@ function collectForm(runtime) {
   return {
     target: element(root, "#target-input").value,
     full_shift_workers: element(root, "#workers-input").value,
-    has_half_shift_worker: element(root, "#half-shift-input").checked,
+    half_shift_workers: element(root, "#half-shift-input").value,
     overtime: element(root, "#overtime-input").value,
     bonus: element(root, "#bonus-input").value,
     idle: element(root, "#idle-input").value,
@@ -184,6 +178,7 @@ function markFormChanged(runtime, immediate = false) {
   clearResultForEdit(runtime);
   scheduleFormEvent(runtime, immediate);
   renderLaborSummary(runtime, collectForm(runtime));
+  renderOvertimeTotal(runtime, collectForm(runtime));
 }
 
 function attachEvents(runtime) {
@@ -200,6 +195,16 @@ function attachEvents(runtime) {
       input.addEventListener("focus", () => {
         const parsed = parseDraftNumber(input.value, true);
         if (parsed !== null && Number.isInteger(parsed)) input.value = String(parsed);
+      });
+    }
+    // Giá trị mặc định 0: chọn sẵn để số gõ vào thay thế nó thay vì nối đuôi.
+    if (["target", "overtime", "bonus", "idle"].includes(field)) {
+      input.addEventListener("focus", () => {
+        if (input.value === "0") input.select();
+      });
+      // Chrome/Safari bỏ chọn khi nhả chuột sau khi focus; chặn đúng lần đó.
+      input.addEventListener("mouseup", (event) => {
+        if (input.value === "0" && input.selectionStart === 0 && input.selectionEnd === 1) event.preventDefault();
       });
     }
   }
@@ -230,6 +235,9 @@ function attachEvents(runtime) {
       closeProductOptions(runtime);
     }
   });
+  const clear = element(root, "#product-clear");
+  clear.addEventListener("mousedown", (event) => event.preventDefault());
+  clear.addEventListener("click", () => clearProduct(runtime));
   search.addEventListener("blur", () => setTimeout(() => {
     closeProductOptions(runtime);
     restoreProductText(runtime);
@@ -256,17 +264,6 @@ function attachEvents(runtime) {
     const last = runtime.dashboardLastPage;
     if (page < last) sendEvent(runtime, "page", { page: page + 1 });
   });
-  const bonusArea = element(root, "#bonus-chart");
-  if (typeof ResizeObserver === "function") {
-    let lastWidth = 0;
-    new ResizeObserver(() => {
-      const width = Math.round(bonusArea.clientWidth);
-      if (width > 0 && Math.abs(width - lastWidth) > 8 && runtime.bonusRows) {
-        lastWidth = width;
-        renderBonusChart(runtime, runtime.bonusRows);
-      }
-    }).observe(bonusArea);
-  }
   root.addEventListener("pointermove", (event) => {
     const target = event.target.closest?.("[data-chart-index]");
     if (!target) return;
@@ -307,6 +304,7 @@ function syncInput(runtime, field, incoming) {
   const map = {
     target: "#target-input",
     full_shift_workers: "#workers-input",
+    half_shift_workers: "#half-shift-input",
     overtime: "#overtime-input",
     bonus: "#bonus-input",
     idle: "#idle-input",
@@ -403,11 +401,36 @@ function selectProduct(runtime, item) {
   scheduleFormEvent(runtime, true);
 }
 
+function clearProduct(runtime) {
+  const root = runtime.root;
+  const search = element(root, "#product-search");
+  if (runtime.selectedItemKey) {
+    runtime.selectedItemKey = "";
+    setText(root, "#smv-display", "—");
+    element(root, "#smv-help").hidden = true;
+    runtime.localRevision += 1;
+    runtime.draftDirty = true;
+    clearResultForEdit(runtime);
+    scheduleFormEvent(runtime, true);
+  }
+  search.value = "";
+  search.removeAttribute("aria-activedescendant");
+  runtime.selectedOptionIndex = -1;
+  renderProductOptions(runtime, "", true);
+  search.focus();
+}
+
 function renderLaborSummary(runtime, form) {
   const number = parseDraftNumber(form.full_shift_workers, true);
-  const half = form.has_half_shift_worker;
-  if (number !== null && number < 0) {
+  // Ô nửa ca để trống nghĩa là 0 người.
+  const half = String(form.half_shift_workers ?? "").trim() === "" ? 0 : parseDraftNumber(form.half_shift_workers, true);
+  if ((number !== null && number < 0) || (half !== null && half < 0)) {
     setText(runtime.root, "#labor-summary", "Số người không được âm.");
+    setText(runtime.root, "#labor-converted", "Quy đổi: — lao động/ca");
+    return;
+  }
+  if (half === null || !Number.isInteger(half)) {
+    setText(runtime.root, "#labor-summary", "Nhập số nguyên người nửa ca");
     setText(runtime.root, "#labor-converted", "Quy đổi: — lao động/ca");
     return;
   }
@@ -416,8 +439,20 @@ function renderLaborSummary(runtime, form) {
     setText(runtime.root, "#labor-converted", "Quy đổi: — lao động/ca");
     return;
   }
-  setText(runtime.root, "#labor-summary", `${formatNumber(number, 0)} người cả ca${half ? " + 1 người nửa ca" : ""}`);
-  setText(runtime.root, "#labor-converted", `Quy đổi: ${formatNumber(number + (half ? 0.5 : 0), 1)} lao động/ca`);
+  setText(runtime.root, "#labor-summary", `${formatNumber(number, 0)} người cả ca${half ? ` + ${formatNumber(half, 0)} người nửa ca` : ""}`);
+  setText(runtime.root, "#labor-converted", `Quy đổi: ${formatNumber(number + half * 0.5, 1)} lao động/ca`);
+}
+
+// Tăng ca nhập theo từng người; mô hình nhận tổng cả tổ = số người làm cả ca × phút mỗi người.
+function renderOvertimeTotal(runtime, form) {
+  const workers = parseDraftNumber(form.full_shift_workers, true);
+  const minutes = parseDraftNumber(form.overtime);
+  if (workers === null || !Number.isInteger(workers) || workers < 0 || minutes === null || minutes < 0) {
+    setText(runtime.root, "#overtime-total", "Tổng cả tổ: — phút");
+    return;
+  }
+  setText(runtime.root, "#overtime-total",
+    `Tổng cả tổ: ${formatNumber(workers, 0)} × ${formatNumber(minutes, 2)} = ${formatNumber(workers * minutes, 0)} phút`);
 }
 
 function renderFieldErrors(runtime, errors) {
@@ -426,6 +461,7 @@ function renderFieldErrors(runtime, errors) {
     product: ["#error-product", ".product-field"],
     target: ["#error-target", "#target-input"],
     full_shift_workers: ["#error-full_shift_workers", "#workers-input"],
+    half_shift_workers: ["#error-half_shift_workers", "#half-shift-input"],
     overtime: ["#error-overtime", "#overtime-input"],
     bonus: ["#error-bonus", "#bonus-input"],
     idle: ["#error-idle", "#idle-input"],
@@ -458,8 +494,8 @@ function renderRanges(runtime, data) {
   };
   show("#range-target", finite(limits.target?.min) === null ? null : limits.target.min * 100,
     finite(limits.target?.max) === null ? null : limits.target.max * 100, "%");
-  show("#range-workers", labor.full_shift_workers_min, labor.full_shift_workers_max_without_half, " người");
-  show("#range-overtime", limits.overtime?.min, limits.overtime?.max, " phút");
+  show("#range-workers", labor.full_shift_workers_min, labor.converted_workers_max, " người");
+  show("#range-overtime", limits.overtime_per_worker?.min, limits.overtime_per_worker?.max, " phút");
   show("#range-idle", limits.idle?.min, limits.idle?.max, " phút");
   show("#range-bonus", limits.bonus?.min, limits.bonus?.max, " VNĐ");
   const typical = limits.bonus?.typical;
@@ -494,11 +530,10 @@ function renderForecast(runtime, data, current) {
   }
 
   if (Array.isArray(runtime.catalog)) {
-    for (const field of ["target", "full_shift_workers", "overtime", "bonus", "idle"]) syncInput(runtime, field, form[field]);
-    const checkbox = element(root, "#half-shift-input");
-    if (activeElement(runtime) !== checkbox) checkbox.checked = form.has_half_shift_worker === true;
+    for (const field of ["target", "full_shift_workers", "half_shift_workers", "overtime", "bonus", "idle"]) syncInput(runtime, field, form[field]);
     runtime.serverForm = form;
     renderLaborSummary(runtime, collectForm(runtime));
+    renderOvertimeTotal(runtime, collectForm(runtime));
     renderFieldErrors(runtime, current && data.prediction_revision === runtime.localRevision ? data.prediction_errors : {});
     renderProductOptions(runtime, element(root, "#product-search").value, !element(root, "#product-options").hidden);
   } else {
@@ -675,10 +710,12 @@ function renderOptions(runtime, data, status, prediction, stale) {
   const titles = {
     workers: ["PHƯƠNG ÁN 1", "Bổ sung nhân lực"],
     overtime: ["PHƯƠNG ÁN 2", "Điều chỉnh tăng ca"],
-    combined: ["PHƯƠNG ÁN 3", "Phương án kết hợp"],
+    bonus: ["PHƯƠNG ÁN 3", "Tăng tiền thưởng"],
+    idle: ["PHƯƠNG ÁN 4", "Giảm thời gian máy dừng"],
+    combined: ["PHƯƠNG ÁN 5", "Phương án kết hợp"],
   };
   const options = Array.isArray(data.recommendations.options) ? data.recommendations.options : [];
-  for (const optionId of ["workers", "overtime", "combined"]) {
+  for (const optionId of ["workers", "overtime", "bonus", "idle", "combined"]) {
     const option = options.find((row) => row.id === optionId);
     if (!option) continue;
     grid.appendChild(buildOptionCard(runtime, option, titles[optionId], optionId === "combined"));
@@ -704,12 +741,21 @@ function applyOption(runtime, option) {
   const workers = finite(option.inputs?.workers);
   const overtime = finite(option.inputs?.overtime);
   const bonus = finite(option.inputs?.bonus);
-  if (workers === null || overtime === null || bonus === null) return;
-  const whole = Math.floor(workers);
+  const idle = finite(option.inputs?.idle);
+  if (workers === null || overtime === null || bonus === null || idle === null) return;
+  // Giữ số người nửa ca đang nhập nếu phần còn lại là số nguyên người cả ca; không thì tách 0 hoặc 1 người nửa ca.
+  const keptHalf = parseDraftNumber(element(root, "#half-shift-input").value || "0", true);
+  const keptWhole = keptHalf === null ? null : workers - keptHalf / 2;
+  const keep = keptWhole !== null && Number.isInteger(keptHalf) && keptHalf >= 0
+    && Number.isInteger(keptWhole) && keptWhole >= 1;
+  const whole = keep ? keptWhole : Math.floor(workers);
   element(root, "#workers-input").value = String(whole);
-  element(root, "#half-shift-input").checked = workers - whole >= 0.5 - 1e-9;
-  element(root, "#overtime-input").value = String(Math.round(overtime));
+  element(root, "#half-shift-input").value = String(keep ? keptHalf : (workers - whole >= 0.5 - 1e-9 ? 1 : 0));
+  // Phương án trả tổng cả tổ; ô nhập là phút mỗi người (làm tròn 2 chữ số vẫn khôi phục đúng tổng).
+  const perPerson = whole > 0 ? Math.round((overtime / whole) * 100) / 100 : 0;
+  element(root, "#overtime-input").value = String(perPerson).replace(".", ",");
   element(root, "#bonus-input").value = String(Math.round(bonus));
+  element(root, "#idle-input").value = String(Math.round(idle));
   markFormChanged(runtime, true);
 }
 
@@ -763,8 +809,9 @@ function buildOptionCard(runtime, option, titleInfo, featured) {
   const deltas = option.deltas || {};
   const fieldSpecs = [
     ["workers", "Nhân công", " lao động/ca", 1],
-    ["overtime", "Tăng ca", " phút", 0],
+    ["overtime", "Tăng ca cả tổ", " phút", 0],
     ["bonus", "Tiền thưởng", " VNĐ", 0],
+    ["idle", "Máy dừng", " phút", 0],
   ];
   for (const [field, label, unit, decimals] of fieldSpecs) {
     const row = document.createElement("div");
@@ -785,7 +832,8 @@ function buildOptionCard(runtime, option, titleInfo, featured) {
     } else {
       const unitSuffix = field === "bonus" ? " VNĐ" : unit;
       valueText.textContent = `${formatNumber(before, decimals)} → ${formatNumber(after, decimals)} (${signed(difference, decimals)}${unitSuffix})`;
-      valueText.classList.add(difference > 0 ? "is-increase" : "is-decrease");
+      // Máy dừng giảm là cải thiện nên tô xanh.
+      valueText.classList.add((difference > 0) !== (field === "idle") ? "is-increase" : "is-decrease");
     }
     row.append(name, valueText);
     changes.appendChild(row);
@@ -813,7 +861,7 @@ function dataBaseline(option) {
   // The backend's deltas compare against the original shift. The baseline inputs
   // are not repeated on every option, so derive them from inputs minus deltas.
   const baseline = {};
-  for (const field of ["workers", "overtime", "bonus"]) {
+  for (const field of ["workers", "overtime", "bonus", "idle"]) {
     const input = finite(option.inputs?.[field]);
     const delta = finite(option.deltas?.[field]);
     baseline[field] = input === null || delta === null ? null : input - delta;
@@ -874,6 +922,9 @@ function renderManagement(runtime, data) {
 
   renderComparisonChart(runtime, dashboard.charts?.product_comparison || []);
   renderBonusChart(runtime, dashboard.charts?.bonus_vs_actual || []);
+  renderIdleChart(runtime, dashboard.charts?.idle_by_product);
+  renderOvertimeChart(runtime, dashboard.charts?.overtime_vs_actual);
+  renderDistributionChart(runtime, dashboard.charts?.actual_distribution);
   renderHistory(runtime, dashboard.history || [], data.dashboard_page || 0);
 }
 
@@ -888,6 +939,9 @@ function renderDashboardEmpty(runtime) {
   element(root, "#bonus-chart").replaceChildren();
   element(root, "#comparison-empty").hidden = false;
   element(root, "#bonus-empty").hidden = false;
+  renderIdleChart(runtime, []);
+  renderOvertimeChart(runtime, []);
+  renderDistributionChart(runtime, null);
   element(root, "#history-body").replaceChildren();
   element(root, "#history-empty").hidden = false;
   setText(root, "#page-summary", "Hiển thị 0 bản ghi");
@@ -949,70 +1003,352 @@ function renderComparisonChart(runtime, rows) {
   area.appendChild(list);
 }
 
+// Các mức thưởng (VNĐ/ca) để gom ca thành vài nhóm dễ đọc; nhóm không có ca nào thì bỏ qua.
+const BONUS_BANDS = [
+  { label: "Không thưởng", min: 0, max: 0 },
+  { label: "Dưới 8.000", min: 0, max: 8000 },
+  { label: "8.000 – 12.000", min: 8000, max: 12000 },
+  { label: "12.000 – 18.000", min: 12000, max: 18000 },
+  { label: "Từ 18.000", min: 18000, max: Infinity },
+];
+
+function groupByBonus(rows) {
+  const valid = rows.filter((row) => finite(row.bonus) !== null && finite(row.actual) !== null && finite(row.target) !== null);
+  const groups = BONUS_BANDS.map((band, index) => {
+    const inBand = valid.filter((row) => {
+      const bonus = finite(row.bonus);
+      return index === 0 ? bonus === 0 : bonus > 0 && bonus >= band.min && bonus < band.max;
+    });
+    const achieved = inBand.filter((row) => finite(row.actual) >= finite(row.target)).length;
+    const actualSum = inBand.reduce((sum, row) => sum + finite(row.actual), 0);
+    return {
+      label: band.label, count: inBand.length, achieved,
+      rate: inBand.length ? achieved / inBand.length : null,
+      actualMean: inBand.length ? actualSum / inBand.length : null,
+    };
+  }).filter((group) => group.count > 0);
+  const achievedAll = groups.reduce((sum, group) => sum + group.achieved, 0);
+  return { groups, overall: valid.length ? achievedAll / valid.length : null };
+}
+
 function renderBonusChart(runtime, rows) {
   const root = runtime.root;
   const area = element(root, "#bonus-chart");
   const empty = element(root, "#bonus-empty");
-  runtime.bonusRows = rows;
   area.replaceChildren();
   element(root, "#chart-tooltip").hidden = true;
-  const points = rows.filter((row) => finite(row.bonus) !== null && finite(row.actual) !== null && finite(row.target) !== null);
-  empty.hidden = points.length > 0;
-  if (!points.length) return;
-  // Vẽ theo bề rộng thật của khung để chữ giữ nguyên 13px, không bị co theo viewBox.
-  const width = area.clientWidth > 0 ? Math.max(300, Math.round(area.clientWidth)) : 720;
-  const height = width < 500 ? 260 : 292;
-  const margin = { top: 13, right: 14, bottom: 40, left: 50 };
-  const plotWidth = width - margin.left - margin.right;
-  const plotHeight = height - margin.top - margin.bottom;
-  const xMax = niceMaximum(Math.max(1, ...points.map((point) => finite(point.bonus))));
-  const yMax = niceMaximum(Math.max(1, ...points.flatMap((point) => [finite(point.actual), finite(point.target)])));
-  const svg = svgNode("svg", {
-    viewBox: `0 0 ${width} ${height}`, role: "img",
-    "aria-label": "Biểu đồ phân tán tiền thưởng và năng suất thực tế. Xem bảng tra cứu bên dưới để đọc từng ca.",
+  const { groups, overall } = groupByBonus(rows);
+  empty.hidden = groups.length > 0;
+  if (!groups.length) return;
+
+  const list = document.createElement("div");
+  list.className = "dot-list";
+  list.style.setProperty("--avg", `${overall * 100}%`);
+  groups.forEach((group, index) => {
+    const row = document.createElement("div");
+    row.className = "dot-row";
+    row.tabIndex = 0;
+    row.setAttribute("role", "img");
+    row.dataset.chartIndex = `bonus-${index}`;
+    row.setAttribute("aria-label", `${group.label} VNĐ mỗi ca: ${formatNumber(group.count, 0)} ca, ${formatPercent(group.rate)} đạt mục tiêu`);
+    const name = document.createElement("div");
+    name.className = "row-label";
+    const title = document.createElement("span");
+    title.textContent = group.label;
+    const count = document.createElement("small");
+    count.textContent = `${formatNumber(group.count, 0)} ca`;
+    name.append(title, count);
+    const track = document.createElement("div");
+    track.className = "dot-track";
+    const pct = group.rate * 100;
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    dot.style.left = `${pct}%`;
+    const value = document.createElement("span");
+    value.className = pct > 78 ? "dot-value is-left" : "dot-value";
+    value.style.left = `${pct}%`;
+    value.textContent = formatPercent(group.rate);
+    track.append(dot, value);
+    row.append(name, track);
+    list.appendChild(row);
   });
-  for (let tick = 0; tick <= 4; tick += 1) {
-    const yValue = yMax * tick / 4;
-    const y = margin.top + plotHeight * (1 - tick / 4);
-    svg.appendChild(svgNode("line", { x1: margin.left, x2: width - margin.right, y1: y, y2: y, class: "grid-line" }));
-    const label = svgNode("text", { x: margin.left - 7, y: y + 4, "text-anchor": "end", class: "axis-label" });
-    label.textContent = `${formatNumber(yValue * 100, 0)}%`;
-    svg.appendChild(label);
-    const xValue = xMax * (tick / 4) ** 2;
-    const x = margin.left + plotWidth * tick / 4;
-    svg.appendChild(svgNode("line", { x1: x, x2: x, y1: margin.top, y2: margin.top + plotHeight, class: "grid-line" }));
-    const xLabel = svgNode("text", { x, y: height - 14, "text-anchor": "middle", class: "axis-label" });
-    xLabel.textContent = compactMoney(xValue);
-    svg.appendChild(xLabel);
+  const axis = document.createElement("div");
+  axis.className = "dot-axis";
+  axis.setAttribute("aria-hidden", "true");
+  const ticks = document.createElement("div");
+  ticks.className = "dot-ticks";
+  for (const tick of [0, 50, 100]) {
+    const label = document.createElement("span");
+    label.style.left = `${tick}%`;
+    label.textContent = `${tick}%`;
+    ticks.appendChild(label);
   }
-  svg.appendChild(svgNode("line", { x1: margin.left, x2: width - margin.right, y1: margin.top + plotHeight, y2: margin.top + plotHeight, class: "axis-line" }));
-  points.forEach((point, index) => {
-    const xValue = finite(point.bonus), actual = finite(point.actual), target = finite(point.target);
-    const x = margin.left + Math.sqrt(xValue / xMax) * plotWidth;
-    const y = margin.top + plotHeight * (1 - actual / yMax);
-    const common = { class: "data-point", "data-chart-index": `bonus-${index}` };
-    if (actual >= target) {
-      svg.appendChild(svgNode("circle", { ...common, cx: x, cy: y, r: 3.6, fill: "#0f766e", class: "data-point is-achieved" }));
-    } else {
-      svg.appendChild(svgNode("path", { ...common, d: `M${x} ${y - 4.6}L${x + 4.2} ${y + 3.4}L${x - 4.2} ${y + 3.4}Z`, fill: "#b91c1c", class: "data-point is-missed" }));
-    }
+  axis.appendChild(ticks);
+  list.appendChild(axis);
+  runtime.pendingChartData = { ...(runtime.pendingChartData || {}), bonusGroups: groups };
+  area.appendChild(list);
+}
+
+function setChartData(runtime, patch) {
+  runtime.pendingChartData = { ...(runtime.pendingChartData || {}), ...patch };
+}
+
+function div(className, text) {
+  const node = document.createElement("div");
+  node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+// Làm tròn trục lên bậc 1/2/5 × 10^k để nhãn trục gọn; trả về các mốc từ 0 tới đỉnh trục.
+function axisTicks(max, count, minStep = 0) {
+  const raw = Math.max(max, 1e-9) / count;
+  const power = 10 ** Math.floor(Math.log10(raw));
+  const unit = raw / power;
+  const step = Math.max(minStep, (unit <= 1 ? 1 : unit <= 2 ? 2 : unit <= 5 ? 5 : 10) * power);
+  const top = Math.max(step, Math.ceil(max / step - 1e-9) * step);
+  const values = [];
+  for (let value = 0; value <= top + step / 1e6; value += step) values.push(value);
+  return { top, values };
+}
+
+// Khung trục dùng chung cho biểu đồ phân tán và biểu đồ cột; mọi nhãn là HTML để giữ cỡ chữ ≥ 13 px.
+function buildXY({ yTicks, xTicks, yTitle, xTitle, label }) {
+  const wrap = div("xy");
+  const yAxis = div("xy-y");
+  yAxis.setAttribute("aria-hidden", "true");
+  const plot = div("xy-plot");
+  plot.tabIndex = 0;
+  plot.setAttribute("role", "img");
+  plot.setAttribute("aria-label", label);
+  for (const tick of yTicks) {
+    const text = document.createElement("span");
+    text.style.bottom = `${tick.pos * 100}%`;
+    text.textContent = tick.label;
+    yAxis.appendChild(text);
+    const line = document.createElement("span");
+    line.className = "xy-grid";
+    line.style.bottom = `${tick.pos * 100}%`;
+    plot.appendChild(line);
+  }
+  const xAxis = div("xy-x");
+  xAxis.setAttribute("aria-hidden", "true");
+  for (const tick of xTicks) {
+    const text = document.createElement("span");
+    text.style.left = `${tick.pos * 100}%`;
+    text.className = tick.pos < 0.06 ? "is-first" : tick.pos > 0.94 ? "is-last" : "";
+    text.textContent = tick.label;
+    xAxis.appendChild(text);
+  }
+  wrap.append(div("xy-title", yTitle), yAxis, plot, xAxis, div("xy-xtitle", xTitle));
+  return { wrap, plot };
+}
+
+function renderOvertimeChart(runtime, rows) {
+  const root = runtime.root;
+  const area = element(root, "#overtime-chart");
+  area.replaceChildren();
+  element(root, "#chart-tooltip").hidden = true;
+  const points = (Array.isArray(rows) ? rows : [])
+    .map((row) => ({ ...row, overtime: finite(row?.overtime), actual: finite(row?.actual) }))
+    .filter((row) => row.overtime !== null && row.actual !== null);
+  element(root, "#overtime-empty").hidden = points.length > 0;
+  setChartData(runtime, { overtimePoints: points });
+  if (!points.length) {
+    return;
+  }
+  const xAxis = axisTicks(Math.max(...points.map((p) => p.overtime), 60), 4);
+  const yTop = Math.max(1, Math.ceil(Math.max(...points.map((p) => p.actual)) * 5) / 5);
+  const yValues = Array.from({ length: Math.round(yTop * 5) + 1 }, (_, i) => i / 5);
+  const { wrap, plot } = buildXY({
+    yTicks: yValues.map((value) => ({ pos: value / yTop, label: `${Math.round(value * 100)}%` })),
+    xTicks: xAxis.values.map((value) => ({ pos: value / xAxis.top, label: moneyFormatter.format(value) })),
+    yTitle: "Năng suất thực tế",
+    xTitle: "Phút tăng ca của cả tổ",
+    label: `Biểu đồ phân tán của ${formatNumber(points.length, 0)} ca`,
   });
-  runtime.pendingChartData = { ...(runtime.pendingChartData || {}), bonusPoints: points };
-  area.appendChild(svg);
+  const dots = document.createDocumentFragment();
+  points.forEach((point, index) => {
+    const dot = document.createElement("span");
+    dot.className = "scatter-dot";
+    dot.dataset.chartIndex = `overtime-${index}`;
+    dot.style.left = `${point.overtime / xAxis.top * 100}%`;
+    dot.style.bottom = `${Math.max(0, point.actual) / yTop * 100}%`;
+    dots.appendChild(dot);
+  });
+  plot.appendChild(dots);
+  area.appendChild(wrap);
 }
 
-function niceMaximum(value) {
-  if (!Number.isFinite(value) || value <= 0) return 1;
-  const step = value <= 1 ? .25 : value <= 2 ? .5 : Math.pow(10, Math.floor(Math.log10(value))) / 2;
-  return Math.max(step, Math.ceil(value / step) * step);
+// Màu phân biệt được cho người mù màu, không dùng tím; tên, phút và % luôn có chữ trong chú giải.
+const IDLE_COLORS = ["#0f766e", "#c2570c", "#0072b2", "#8a6d00", "#b0305c", "#475569"];
+const IDLE_OTHER_COLOR = "#708090";
+const IDLE_MAX_SEGMENTS = 6;
+
+function groupIdle(rows) {
+  const valid = (Array.isArray(rows) ? rows : [])
+    .map((row) => ({ name: String(row?.product ?? ""), minutes: finite(row?.idle_minutes) ?? 0, shifts: finite(row?.shifts) ?? 0 }))
+    .filter((row) => row.minutes > 0)
+    .sort((a, b) => b.minutes - a.minutes);
+  const total = valid.reduce((sum, row) => sum + row.minutes, 0);
+  let kept = valid;
+  if (valid.length > IDLE_MAX_SEGMENTS) {
+    const rest = valid.slice(IDLE_MAX_SEGMENTS - 1);
+    kept = [...valid.slice(0, IDLE_MAX_SEGMENTS - 1), {
+      name: "Khác", minutes: rest.reduce((sum, row) => sum + row.minutes, 0),
+      shifts: rest.reduce((sum, row) => sum + row.shifts, 0), others: rest.length,
+    }];
+  }
+  const segments = kept.map((row, index) => ({
+    ...row, share: row.minutes / total, color: row.others ? IDLE_OTHER_COLOR : IDLE_COLORS[index],
+  }));
+  return { segments, total };
 }
 
-function compactMoney(value) {
-  if (!Number.isFinite(value)) return "—";
-  if (value >= 1_000_000) return `${formatNumber(value / 1_000_000, 1)} tr`;
-  if (value >= 10_000) return `${formatNumber(value / 1_000, 0)}k`;
-  if (value >= 1_000) return `${formatNumber(value / 1_000, 1)}k`;
-  return moneyFormatter.format(value);
+function renderIdleChart(runtime, rows) {
+  const root = runtime.root;
+  const area = element(root, "#idle-chart");
+  area.replaceChildren();
+  element(root, "#chart-tooltip").hidden = true;
+  const { segments, total } = groupIdle(rows);
+  element(root, "#idle-empty").hidden = segments.length > 0;
+  setChartData(runtime, { idleSegments: segments });
+  if (!segments.length) return;
+
+  const SVG = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("class", "donut-svg");
+  svg.setAttribute("aria-hidden", "true");
+  let offset = 0;
+  const gap = segments.length > 1 ? 0.6 : 0;
+  segments.forEach((segment, index) => {
+    const arc = document.createElementNS(SVG, "circle");
+    const attributes = {
+      cx: 50, cy: 50, r: 38, pathLength: 100, fill: "none", stroke: segment.color, "stroke-width": 18,
+      transform: "rotate(-90 50 50)", "stroke-dasharray": `${Math.max(segment.share * 100 - gap, 0.1)} 100`,
+      "stroke-dashoffset": -offset,
+    };
+    for (const [name, value] of Object.entries(attributes)) arc.setAttribute(name, String(value));
+    arc.dataset.chartIndex = `idle-${index}`;
+    svg.appendChild(arc);
+    offset += segment.share * 100;
+  });
+  const center = div("donut-center");
+  const totalText = document.createElement("strong");
+  totalText.textContent = formatNumber(total, 1);
+  const unit = document.createElement("span");
+  unit.textContent = "phút dừng";
+  center.append(totalText, unit);
+  const figure = div("donut-figure");
+  figure.append(svg, center);
+
+  const legend = div("donut-legend");
+  segments.forEach((segment, index) => {
+    const row = div("donut-row");
+    row.tabIndex = 0;
+    row.setAttribute("role", "img");
+    row.dataset.chartIndex = `idle-${index}`;
+    const scope = segment.others ? ` (${formatNumber(segment.others, 0)} sản phẩm)` : "";
+    row.setAttribute("aria-label", `${segment.name}${scope}: ${formatNumber(segment.minutes, 1)} phút máy dừng, ${formatPercent(segment.share)}`);
+    const swatch = document.createElement("i");
+    swatch.className = "donut-swatch";
+    swatch.style.background = segment.color;
+    row.append(swatch, div("donut-name", segment.name),
+      div("donut-min", `${formatNumber(segment.minutes, 1)} phút`), div("donut-pct", formatPercent(segment.share)));
+    legend.appendChild(row);
+  });
+  const wrap = div("donut-wrap");
+  wrap.append(figure, legend);
+  area.appendChild(wrap);
+}
+
+function describeDistribution(stats, total) {
+  const parts = [];
+  const count = finite(stats.count) ?? total;
+  const mean = finite(stats.mean);
+  const median = finite(stats.median);
+  const p10 = finite(stats.p10);
+  const p90 = finite(stats.p90);
+  const below = finite(stats.below_target_share);
+  const std = finite(stats.std);
+  const centre = [];
+  if (mean !== null) centre.push(`trung bình ${formatPercent(mean)}`);
+  if (median !== null) centre.push(`trung vị ${formatPercent(median)}`);
+  if (centre.length) parts.push(centre.join(", "));
+  if (p10 !== null && p90 !== null) parts.push(`80% số ca nằm trong khoảng ${formatPercent(p10)}–${formatPercent(p90)}`);
+  if (below !== null) parts.push(`${formatPercent(below)} số ca dưới mục tiêu`);
+  if (std !== null) parts.push(`độ lệch chuẩn ${formatNumber(std * 100, 1)} điểm %`);
+  return `Trên ${formatNumber(count, 0)} ca${parts.length ? `: ${parts.join("; ")}` : ""}.`;
+}
+
+function renderDistributionChart(runtime, distribution) {
+  const root = runtime.root;
+  const area = element(root, "#distribution-chart");
+  area.replaceChildren();
+  element(root, "#chart-tooltip").hidden = true;
+  const bins = (Array.isArray(distribution?.bins) ? distribution.bins : [])
+    .map((bin) => ({ low: finite(bin?.low), high: finite(bin?.high), count: finite(bin?.count) }))
+    .filter((bin) => bin.low !== null && bin.high !== null && bin.count !== null && bin.high > bin.low)
+    .sort((a, b) => a.low - b.low);
+  const total = bins.reduce((sum, bin) => sum + bin.count, 0);
+  const stats = distribution?.stats;
+  const empty = !bins.length || total <= 0 || !stats;
+  element(root, "#distribution-empty").hidden = !empty;
+  if (empty) {
+    setChartData(runtime, { distributionBins: [] });
+    setText(root, "#distribution-summary", "");
+    return;
+  }
+  bins.forEach((bin) => { bin.share = bin.count / total; });
+  setChartData(runtime, { distributionBins: bins });
+
+  const low = bins[0].low;
+  const span = bins[bins.length - 1].high - low;
+  const position = (value) => Math.max(0, Math.min((value - low) / span, 1));
+  const yAxis = axisTicks(Math.max(...bins.map((bin) => bin.count)), 3, 1);
+  const step = span > 0.6 ? 20 : span > 0.3 ? 10 : 5;
+  const xTicks = [];
+  for (let percent = Math.ceil(low * 100 / step - 1e-9) * step; percent <= (low + span) * 100 + 1e-9; percent += step) {
+    xTicks.push({ pos: position(percent / 100), label: `${percent}%` });
+  }
+  const summary = describeDistribution(stats, total);
+  const { wrap, plot } = buildXY({
+    yTicks: yAxis.values.map((value) => ({ pos: value / yAxis.top, label: formatNumber(value, 0) })),
+    xTicks,
+    yTitle: "Số ca",
+    xTitle: "Năng suất thực tế",
+    label: `Biểu đồ cột phân bố năng suất thực tế. ${summary}`,
+  });
+  const p10 = finite(stats.p10);
+  const p90 = finite(stats.p90);
+  if (p10 !== null && p90 !== null && p90 > p10) {
+    const band = div("hist-band");
+    band.style.left = `${position(p10) * 100}%`;
+    band.style.width = `${(position(p90) - position(p10)) * 100}%`;
+    plot.appendChild(band);
+  }
+  bins.forEach((bin, index) => {
+    const bar = div("hist-bar");
+    bar.tabIndex = 0;
+    bar.setAttribute("role", "img");
+    bar.dataset.chartIndex = `dist-${index}`;
+    bar.setAttribute("aria-label", `Năng suất ${formatPercent(bin.low)} đến ${formatPercent(bin.high)}: ${formatNumber(bin.count, 0)} ca, ${formatPercent(bin.share)}`);
+    bar.style.left = `${position(bin.low) * 100}%`;
+    bar.style.width = `${(position(bin.high) - position(bin.low)) * 100}%`;
+    const fill = document.createElement("span");
+    fill.style.height = `${bin.count / yAxis.top * 100}%`;
+    bar.appendChild(fill);
+    plot.appendChild(bar);
+  });
+  for (const [kind, value] of [["is-median", finite(stats.median)], ["is-mean", finite(stats.mean)]]) {
+    if (value === null) continue;
+    const line = div(`hist-line ${kind}`);
+    line.style.left = `${position(value) * 100}%`;
+    plot.appendChild(line);
+  }
+  area.appendChild(wrap);
+  setText(root, "#distribution-summary", summary);
 }
 
 function showChartTooltip(runtime, target, x, y) {
@@ -1033,12 +1369,31 @@ function showChartTooltip(runtime, target, x, y) {
     lines.push(`Số quan sát: ${formatNumber(row.observations, 0)}`);
   } else if (indexKey.startsWith("bonus-")) {
     const index = Number(indexKey.slice("bonus-".length));
-    const row = data.bonusPoints?.[index];
+    const row = data.bonusGroups?.[index];
     if (!row) return;
-    heading.textContent = row.product;
-    lines.push(`Tiền thưởng: ${formatNumber(row.bonus, 6)} VNĐ`);
-    lines.push(`Mục tiêu: ${formatPercent(row.target)}`);
+    heading.textContent = `${row.label} VNĐ mỗi ca`;
+    lines.push(`Số ca: ${formatNumber(row.count, 0)}`);
+    lines.push(`Đạt mục tiêu: ${formatNumber(row.achieved, 0)} ca (${formatPercent(row.rate)})`);
+    lines.push(`Năng suất TB: ${formatPercent(row.actualMean)}`);
+  } else if (indexKey.startsWith("overtime-")) {
+    const row = data.overtimePoints?.[Number(indexKey.slice("overtime-".length))];
+    if (!row) return;
+    heading.textContent = String(row.product || "Ca sản xuất");
+    lines.push(`Tăng ca: ${formatNumber(row.overtime, 0)} phút (cả tổ)`);
     lines.push(`Thực tế: ${formatPercent(row.actual)}`);
+    if (finite(row.target) !== null) lines.push(`Mục tiêu: ${formatPercent(row.target)}`);
+  } else if (indexKey.startsWith("idle-")) {
+    const row = data.idleSegments?.[Number(indexKey.slice("idle-".length))];
+    if (!row) return;
+    heading.textContent = row.name;
+    lines.push(`Máy dừng: ${formatNumber(row.minutes, 1)} phút (${formatPercent(row.share)})`);
+    lines.push(`Số ca: ${formatNumber(row.shifts, 0)}`);
+    lines.push(`Trung bình mỗi ca: ${formatNumber(row.shifts ? row.minutes / row.shifts : null, 1)} phút`);
+  } else if (indexKey.startsWith("dist-")) {
+    const row = data.distributionBins?.[Number(indexKey.slice("dist-".length))];
+    if (!row) return;
+    heading.textContent = `Năng suất ${formatPercent(row.low)}–${formatPercent(row.high)}`;
+    lines.push(`Số ca: ${formatNumber(row.count, 0)} (${formatPercent(row.share)})`);
   } else return;
   content.appendChild(heading);
   for (const line of lines) {
@@ -1075,7 +1430,7 @@ function renderHistory(runtime, rows, requestedPage) {
     appendCell(tr, formatPercent(row.target), true);
     appendCell(tr, formatNumber(row.smv, 3), true);
     appendCell(tr, formatNumber(row.overtime, 3), true);
-    appendCell(tr, row.bonus === null ? "—" : formatNumber(row.bonus, 6), true);
+    appendCell(tr, formatNumber(row.bonus, 0), true);
     appendCell(tr, formatNumber(row.idle, 3), true);
     appendCell(tr, formatNumber(row.workers, 8), true);
     const actualCell = appendCell(tr, formatPercent(row.actual), true);

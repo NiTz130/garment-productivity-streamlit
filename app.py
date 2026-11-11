@@ -28,12 +28,12 @@ def _new_state() -> dict:
     return {
         "page": "forecast",
         "form": {
-            "target": "",
+            "target": "0",
             "full_shift_workers": "",
-            "has_half_shift_worker": False,
-            "overtime": "",
-            "bonus": "",
-            "idle": "",
+            "half_shift_workers": "",
+            "overtime": "0",
+            "bonus": "0",
+            "idle": "0",
         },
         "selected_item_key": "",
         "revision": 0,
@@ -93,7 +93,6 @@ def _apply_form_event(state: dict, event: dict) -> bool:
     for name in ui_adapter.FORM_FIELDS:
         value = incoming.get(name, "")
         form[name] = "" if value is None else str(value)
-    form["has_half_shift_worker"] = incoming.get("has_half_shift_worker") is True
 
     item_key = event.get("item_key", state["selected_item_key"])
     item_key = item_key if isinstance(item_key, str) else ""

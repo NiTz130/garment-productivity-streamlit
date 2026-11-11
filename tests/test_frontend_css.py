@@ -33,7 +33,7 @@ def test_no_font_size_below_13px():
 BODY_TEXT_SELECTORS = [
     ".empty-result p", ".input-footnote", ".prediction-note", ".result-message",
     ".options-placeholder", ".options-message", ".options-summary", ".option-reason",
-    ".quality-note", ".dashboard-error", ".chart-empty", ".table-empty",
+    ".quality-note", ".dashboard-error", ".chart-empty", ".chart-summary", ".table-empty",
     ".check-row", ".combobox-empty", ".combobox-option strong",
 ]
 

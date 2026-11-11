@@ -7,6 +7,7 @@ from decimal import Decimal
 from numbers import Real
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 import config
@@ -14,6 +15,7 @@ import model
 from data import dataset_fingerprint, history_usable_mask, quality_report, read_workbook, validate
 
 
+_ACTUAL_BIN_WIDTH = .05
 _DATA_CACHE: dict[str, dict] = {}
 _MODEL_CACHE: dict[str, dict] = {}
 
@@ -93,34 +95,34 @@ def _input_ranges(data: dict) -> dict:
     return ranges
 
 
+def _whole_count(value: object, name: str) -> Decimal:
+    if isinstance(value, bool) or not isinstance(value, (Real, Decimal)):
+        raise ValueError(f"LỖI: {name} phải là số nguyên.")
+    number = Decimal(str(value))
+    if not number.is_finite() or number != number.to_integral_value() or number < 0:
+        raise ValueError(f"LỖI: {name} phải là số nguyên không âm.")
+    return number
+
+
 def normalize_shift_inputs(inputs: dict) -> dict:
-    """Convert full-shift headcount plus its optional half shift to model workers."""
+    """Convert full-shift and half-shift headcounts to model workers (a half shift is 4 of 8 hours)."""
     if not isinstance(inputs, dict):
         raise ValueError("LỖI: Đầu vào ca phải là một ánh xạ tên trường/giá trị.")
     has_full_count = "full_shift_workers" in inputs
-    has_half_flag = "has_half_shift_worker" in inputs
-    if not has_full_count and not has_half_flag:
+    has_half_count = "half_shift_workers" in inputs
+    if not has_full_count and not has_half_count:
         return dict(inputs)
-    if not has_full_count or not has_half_flag:
-        raise ValueError("LỖI: Cần gửi cả full_shift_workers và has_half_shift_worker.")
+    if not has_full_count or not has_half_count:
+        raise ValueError("LỖI: Cần gửi cả full_shift_workers và half_shift_workers.")
     if "workers" in inputs:
         raise ValueError("LỖI: Chỉ gửi workers hoặc cặp trường nhân lực theo ca, không gửi đồng thời.")
 
-    full_count = inputs["full_shift_workers"]
-    if isinstance(full_count, bool) or not isinstance(full_count, (Real, Decimal)):
-        raise ValueError("LỖI: full_shift_workers phải là số nguyên.")
-    full_decimal = Decimal(str(full_count))
-    if (not full_decimal.is_finite() or full_decimal != full_decimal.to_integral_value()
-            or full_decimal < 0):
-        raise ValueError("LỖI: full_shift_workers phải là số nguyên không âm.")
-    half_flag = inputs["has_half_shift_worker"]
-    if not isinstance(half_flag, bool):
-        raise ValueError("LỖI: has_half_shift_worker phải là boolean.")
+    full_count = _whole_count(inputs["full_shift_workers"], "full_shift_workers")
+    half_count = _whole_count(inputs["half_shift_workers"], "half_shift_workers")
 
     normalized = {key: value for key, value in inputs.items()
-                  if key not in ("full_shift_workers", "has_half_shift_worker")}
-    workers = full_decimal + (Decimal("0.5") if half_flag else Decimal("0"))
-    normalized["workers"] = float(workers)
+                  if key not in ("full_shift_workers", "half_shift_workers")}
+    normalized["workers"] = float(full_count + Decimal("0.5") * half_count)
     return normalized
 
 
@@ -149,6 +151,14 @@ def _recommendation_limits(data: dict) -> dict:
             "unit": _FIELD_UNITS[field],
             "basis": f"phân vị {config.RECOMMENDATION_QUANTILE:.0%} của dữ liệu hợp lệ, có chặn cấu hình",
         }
+    # Máy dừng chỉ giảm được, tối đa về 0; min/max chỉ dùng làm thang chấm mức can thiệp.
+    limits["idle"] = {
+        "min": config.INPUT_RANGES["idle"][0],
+        "max": config.INPUT_RANGES["idle"][1],
+        "step": 1,
+        "unit": _FIELD_UNITS["idle"],
+        "basis": "giảm dần về 0 phút",
+    }
     return limits
 
 
@@ -198,9 +208,8 @@ def get_catalog() -> dict:
         "input_limits": fields,
         "labor_entry": {
             "full_shift_workers_min": math.ceil(input_ranges["workers"][0]),
-            "full_shift_workers_max_without_half": math.floor(input_ranges["workers"][1]),
-            "full_shift_workers_max_with_half": math.floor(input_ranges["workers"][1] - config.WORKER_STEP),
-            "has_half_shift_worker_type": "boolean",
+            "half_shift_workers_min": 0,
+            "converted_workers_max": math.floor(input_ranges["workers"][1]),
             "derived_workers_step": config.WORKER_STEP,
         },
         "recommendation_limits": _recommendation_limits(data),
@@ -246,6 +255,11 @@ def _axis_values(current: float, maximum: float, cap: int, multiplier: int = 1) 
     if multiplier == 1:
         return [int(value) for value in values]
     return values
+
+
+def _idle_values(current: int | float, cap: int) -> list[int]:
+    """Giá trị máy dừng thấp hơn hiện tại, từ gần đến 0."""
+    return [int(current) - step for step in _axis_values(0, int(current), cap)]
 
 
 def _unavailable(option_id: str, name: str, reason: str, count: int = 0) -> dict:
@@ -326,7 +340,9 @@ def recommend_options(inputs: dict) -> dict:
     names = {
         "workers": "Nhân lực",
         "overtime": "Tăng ca",
-        "combined": "Kết hợp nhân lực, tăng ca và tiền thưởng",
+        "bonus": "Tiền thưởng",
+        "idle": "Giảm máy dừng",
+        "combined": "Kết hợp nhân lực, tăng ca, tiền thưởng và máy dừng",
     }
     if baseline["achieved"]:
         options = [
@@ -340,8 +356,13 @@ def recommend_options(inputs: dict) -> dict:
                                  config.MAX_AXIS_CANDIDATES, multiplier=2)
     overtime_values = _axis_values(base["overtime"], max(base["overtime"], limits["overtime"]["max"]),
                                    config.MAX_AXIS_CANDIDATES)
+    bonus_values = _axis_values(base["bonus"], max(base["bonus"], limits["bonus"]["max"]),
+                                config.MAX_AXIS_CANDIDATES)
+    idle_values = _idle_values(base["idle"], config.MAX_AXIS_CANDIDATES)
     worker_candidates = [{**base, "workers": value} for value in worker_values]
     overtime_candidates = [{**base, "overtime": value} for value in overtime_values]
+    bonus_candidates = [{**base, "bonus": value} for value in bonus_values]
+    idle_candidates = [{**base, "idle": value} for value in idle_values]
 
     combined_worker_values = _axis_values(base["workers"],
                                            max(base["workers"], limits["workers"]["max"]),
@@ -352,14 +373,17 @@ def recommend_options(inputs: dict) -> dict:
     combined_bonus_values = _axis_values(base["bonus"],
                                          max(base["bonus"], limits["bonus"]["max"]),
                                          config.RECOMMENDATION_AXIS_POINTS)
+    combined_idle_values = _idle_values(base["idle"], config.RECOMMENDATION_AXIS_POINTS)
     combined_candidates = [
-        {**base, "workers": workers, "overtime": overtime, "bonus": bonus}
-        for workers, overtime, bonus in product(
+        {**base, "workers": workers, "overtime": overtime, "bonus": bonus, "idle": idle}
+        for workers, overtime, bonus, idle in product(
             [base["workers"], *combined_worker_values],
             [base["overtime"], *combined_overtime_values],
             [base["bonus"], *combined_bonus_values],
+            [base["idle"], *combined_idle_values],
         )
-        if sum((workers != base["workers"], overtime != base["overtime"], bonus != base["bonus"])) >= 2
+        if sum((workers != base["workers"], overtime != base["overtime"],
+                bonus != base["bonus"], idle != base["idle"])) >= 2
     ]
     if len(combined_candidates) > config.MAX_COMBINED_CANDIDATES:
         stride = len(combined_candidates) / config.MAX_COMBINED_CANDIDATES
@@ -371,8 +395,12 @@ def recommend_options(inputs: dict) -> dict:
                          worker_candidates, bundle, limits, ("workers",)),
         _evaluate_option("overtime", names["overtime"], base, baseline["value"], base["target"],
                          overtime_candidates, bundle, limits, ("overtime",)),
+        _evaluate_option("bonus", names["bonus"], base, baseline["value"], base["target"],
+                         bonus_candidates, bundle, limits, ("bonus",)),
+        _evaluate_option("idle", names["idle"], base, baseline["value"], base["target"],
+                         idle_candidates, bundle, limits, ("idle",)),
         _evaluate_option("combined", names["combined"], base, baseline["value"], base["target"],
-                         combined_candidates, bundle, limits, ("workers", "overtime", "bonus")),
+                         combined_candidates, bundle, limits, ("workers", "overtime", "bonus", "idle")),
     ]
     return {
         "baseline": baseline,
@@ -390,6 +418,38 @@ def _number(value):
         return None
     number = float(value)
     return number if math.isfinite(number) else None
+
+
+def _idle_by_product(selected) -> list[dict]:
+    """Idle minutes per product, largest first; share is of the filtered total."""
+    total = float(selected["idle"].sum())
+    rows = [{
+        "product": str(name),
+        "idle_minutes": _number(group["idle"].sum()),
+        "share": _number(group["idle"].sum() / total) if total else 0.,
+        "shifts": int(len(group)),
+        "idle_per_shift": _number(group["idle"].mean()),
+    } for name, group in selected.groupby("product", sort=True)]
+    return sorted(rows, key=lambda row: -row["idle_minutes"])
+
+
+def _actual_distribution(selected) -> dict:
+    """Fixed 0.05-wide bins from 0; the last bin includes its upper edge."""
+    if selected.empty:
+        return {"bins": [], "stats": None}
+    actual, width = selected["actual"].astype(float), _ACTUAL_BIN_WIDTH
+    size = max(1, math.ceil(round(actual.max() / width, 9)))
+    index = np.minimum(np.floor((actual / width).round(9)), size - 1).astype(int)
+    counts = np.bincount(index, minlength=size)
+    bins = [{"low": round(i * width, 10), "high": round((i + 1) * width, 10), "count": int(counts[i])}
+            for i in range(size)]
+    stats = {
+        "count": int(len(actual)), "mean": _number(actual.mean()), "median": _number(actual.median()),
+        "std": _number(actual.std(ddof=0)), "p10": _number(actual.quantile(.1)),
+        "p90": _number(actual.quantile(.9)), "min": _number(actual.min()), "max": _number(actual.max()),
+        "below_target_share": _number((actual < selected["target"]).mean()),
+    }
+    return {"bins": bins, "stats": stats}
 
 
 def get_management_dashboard(product: str | None = None) -> dict:
@@ -421,12 +481,20 @@ def get_management_dashboard(product: str | None = None) -> dict:
             })
 
     bonus_scatter = []
+    overtime_scatter = []
     history = []
     for source_row, row in selected.iterrows():
         normalized = {column: row[column] for column in config.DATA_COLUMNS}
         bonus_scatter.append({
             "source_row": int(source_row),
             "bonus": _number(row["bonus"]),
+            "actual": _number(row["actual"]),
+            "target": _number(row["target"]),
+            "product": str(row["product"]),
+        })
+        overtime_scatter.append({
+            "source_row": int(source_row),
+            "overtime": _number(row["overtime"]),
             "actual": _number(row["actual"]),
             "target": _number(row["target"]),
             "product": str(row["product"]),
@@ -456,6 +524,9 @@ def get_management_dashboard(product: str | None = None) -> dict:
         "charts": {
             "product_comparison": product_comparison,
             "bonus_vs_actual": bonus_scatter,
+            "overtime_vs_actual": overtime_scatter,
+            "idle_by_product": _idle_by_product(selected) if count else [],
+            "actual_distribution": _actual_distribution(selected),
         },
         "history": history,
     }

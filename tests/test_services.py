@@ -74,7 +74,8 @@ def test_catalog_has_sku_product_median_smv_and_vnd_limits(monkeypatch):
     assert result["input_limits"]["bonus"]["unit"] == "VND"
     assert result["input_limits"]["bonus"]["max"] == 1000
     assert result["input_limits"]["workers"]["step"] == .5
-    assert result["labor_entry"]["full_shift_workers_max_with_half"] == 88
+    assert result["labor_entry"]["converted_workers_max"] == 89
+    assert result["labor_entry"]["half_shift_workers_min"] == 0
     assert result["recommendation_limits"]["bonus"]["max"] <= 1000
 
 
@@ -123,17 +124,28 @@ def test_predict_shift_returns_ratio_status_and_batch_matches_single(frame, monk
     assert result["status"] == ("achieved" if result["value"] >= inputs["target"] else "below_target")
     assert "raw" in result and "clipped" in result
     half_shift = {key: value for key, value in inputs.items() if key != "workers"}
-    half_shift.update(full_shift_workers=30, has_half_shift_worker=True)
+    half_shift.update(full_shift_workers=30, half_shift_workers=1)
     assert services.predict_shift(half_shift)["inputs"]["workers"] == 30.5
+
+
+@pytest.mark.parametrize("full, half, workers", [(30, 0, 30.0), (30, 1, 30.5), (30, 2, 31.0), (10, 7, 13.5)])
+def test_half_shift_workers_count_as_half_a_worker_each(full, half, workers):
+    normalized = services.normalize_shift_inputs(
+        {"full_shift_workers": full, "half_shift_workers": half, "bonus": 0})
+    assert normalized == {"bonus": 0, "workers": workers}
 
 
 @pytest.mark.parametrize("entry", [
     {"full_shift_workers": 30},
-    {"has_half_shift_worker": True},
-    {"full_shift_workers": True, "has_half_shift_worker": False},
-    {"full_shift_workers": 30.1, "has_half_shift_worker": False},
-    {"full_shift_workers": 30, "has_half_shift_worker": 1},
-    {"full_shift_workers": 30, "has_half_shift_worker": False, "workers": 30},
+    {"half_shift_workers": 1},
+    {"full_shift_workers": True, "half_shift_workers": 0},
+    {"full_shift_workers": 30.1, "half_shift_workers": 0},
+    {"full_shift_workers": 30, "half_shift_workers": True},
+    {"full_shift_workers": 30, "half_shift_workers": 1.5},
+    {"full_shift_workers": 30, "half_shift_workers": -1},
+    {"full_shift_workers": 30, "half_shift_workers": "1"},
+    {"full_shift_workers": 30, "has_half_shift_worker": True},
+    {"full_shift_workers": 30, "half_shift_workers": 0, "workers": 30},
 ])
 def test_shift_labor_entry_rejects_partial_or_ambiguous_counts(entry):
     with pytest.raises(ValueError):
@@ -153,7 +165,7 @@ def test_predict_validates_before_model_access_and_applies_dataset_bonus_limit(m
         services.predict_shift(excessive)
 
 
-def test_recommendations_use_three_distinct_directions_and_integer_steps(monkeypatch):
+def test_recommendations_use_five_distinct_directions_and_integer_steps(monkeypatch):
     record = _record(_small_history())
     bundle = _compatible_bundle(_DirectionalEstimator(), record["fingerprint"])
     monkeypatch.setattr(services, "_get_dataset", lambda path=config.SOURCE: record)
@@ -162,7 +174,9 @@ def test_recommendations_use_three_distinct_directions_and_integer_steps(monkeyp
               "overtime": 0, "bonus": 0, "idle": 0}
     result = services.recommend_options(inputs)
     options = {option["id"]: option for option in result["options"]}
-    assert set(options) == {"workers", "overtime", "combined"}
+    assert set(options) == {"workers", "overtime", "bonus", "idle", "combined"}
+    # Mô hình giả không có hệ số máy dừng; ca gốc idle=0 nên phương án máy dừng không khả dụng.
+    assert not options.pop("idle")["available"]
     assert all(option["available"] for option in options.values())
     staff = options["workers"]
     overtime = options["overtime"]
@@ -172,6 +186,9 @@ def test_recommendations_use_three_distinct_directions_and_integer_steps(monkeyp
     assert overtime["inputs"]["overtime"] > inputs["overtime"]
     assert all(overtime["deltas"][key] == 0 for key in ("workers", "bonus", "idle", "smv", "target"))
     assert sum(combined["deltas"][key] > 0 for key in ("workers", "overtime", "bonus")) >= 2
+    bonus = options["bonus"]
+    assert bonus["inputs"]["bonus"] > inputs["bonus"]
+    assert all(bonus["deltas"][key] == 0 for key in ("workers", "overtime", "idle", "smv", "target"))
     for option in options.values():
         assert option["inputs"]["workers"] * 2 % 1 == 0
         assert isinstance(option["inputs"]["overtime"], int)
@@ -180,6 +197,31 @@ def test_recommendations_use_three_distinct_directions_and_integer_steps(monkeyp
         assert option["inputs"]["smv"] == inputs["smv"]
         assert option["inputs"]["idle"] == inputs["idle"]
         assert option["scope"] == "best_within_search"
+
+
+class _IdleEstimator(_DirectionalEstimator):
+    def predict(self, features):
+        base = super().predict(features)
+        return [value - .001 * row.idle for value, row in zip(base, features.itertuples())]
+
+
+def test_idle_option_only_lowers_idle_and_combined_may_use_it(monkeypatch):
+    record = _record(_small_history())
+    bundle = _compatible_bundle(_IdleEstimator(), record["fingerprint"])
+    monkeypatch.setattr(services, "_get_dataset", lambda: record)
+    monkeypatch.setattr(services, "_get_model", lambda data: bundle)
+    inputs = {"target": .5, "smv": 10., "workers": 2.,
+              "overtime": 0, "bonus": 0, "idle": 100}
+    options = {o["id"]: o for o in services.recommend_options(inputs)["options"]}
+    idle = options["idle"]
+    assert idle["available"] and 0 <= idle["inputs"]["idle"] < 100
+    assert isinstance(idle["inputs"]["idle"], int)
+    assert idle["deltas"]["idle"] < 0
+    assert all(idle["deltas"][key] == 0 for key in ("workers", "overtime", "bonus", "smv", "target"))
+    assert options["combined"]["available"]
+    assert services._idle_values(0, 8) == []
+    assert services._idle_values(3, 8) == [2, 1, 0]
+    assert services._idle_values(100, 8)[-1] == 0
 
 
 def test_combined_option_can_hold_bonus_at_its_ceiling(monkeypatch):
@@ -258,6 +300,110 @@ def test_dashboard_filter_aligns_kpis_charts_and_history(frame, monkeypatch):
     )
     assert "shift_date" not in result["history"][0]
     json.dumps(result, allow_nan=False)
+
+
+def _dashboard_charts(monkeypatch, rows, product=None):
+    """rows: (product, target, overtime, idle, actual); excel_row starts at 2."""
+    frame = pd.DataFrame(
+        [{"sku": "S", "product": p, "target": t, "smv": 10., "workers": 5., "overtime": o,
+          "bonus": 0., "idle": i, "actual": a} for p, t, o, i, a in rows],
+        columns=config.DATA_COLUMNS, index=pd.Index(range(2, 2 + len(rows)), name="excel_row"))
+    record = _record(frame)
+    monkeypatch.setattr(services, "_get_dataset", lambda path=config.SOURCE: record)
+    result = services.get_management_dashboard(product)
+    json.dumps(result, allow_nan=False)
+    return result["charts"]
+
+
+def test_dashboard_overtime_vs_actual_mirrors_bonus_shape(monkeypatch):
+    charts = _dashboard_charts(monkeypatch, [("Áo", .8, 0, 0, .4), ("Quần", .7, 600, 5, .7)])
+    assert charts["overtime_vs_actual"] == [
+        {"source_row": 2, "overtime": 0., "actual": .4, "target": .8, "product": "Áo"},
+        {"source_row": 3, "overtime": 600., "actual": .7, "target": .7, "product": "Quần"},
+    ]
+    only_quan = _dashboard_charts(monkeypatch, [("Áo", .8, 0, 0, .4), ("Quần", .7, 600, 5, .7)], "Quần")
+    assert [p["source_row"] for p in only_quan["overtime_vs_actual"]] == [3]
+
+
+def test_dashboard_idle_by_product_sorted_with_shares_and_zero_rows(monkeypatch):
+    rows = [("Áo", .8, 0, 10, .4), ("Áo", .8, 0, 20, .5), ("Quần", .8, 0, 60, .6), ("Váy", .8, 0, 0, .7)]
+    idle = _dashboard_charts(monkeypatch, rows)["idle_by_product"]
+    assert [r["product"] for r in idle] == ["Quần", "Áo", "Váy"]
+    assert idle[0] == {"product": "Quần", "idle_minutes": 60., "share": pytest.approx(60 / 90),
+                       "shifts": 1, "idle_per_shift": 60.}
+    assert idle[1]["idle_minutes"] == 30. and idle[1]["shifts"] == 2 and idle[1]["idle_per_shift"] == 15.
+    assert idle[2] == {"product": "Váy", "idle_minutes": 0., "share": 0., "shifts": 1, "idle_per_shift": 0.}
+    assert sum(r["share"] for r in idle) == pytest.approx(1.)
+    assert [r["product"] for r in _dashboard_charts(monkeypatch, rows, "Áo")["idle_by_product"]] == ["Áo"]
+    assert _dashboard_charts(monkeypatch, rows, "Áo")["idle_by_product"][0]["share"] == pytest.approx(1.)
+
+
+def test_dashboard_idle_by_product_all_zero_has_zero_share(monkeypatch):
+    idle = _dashboard_charts(monkeypatch, [("Áo", .8, 0, 0, .4), ("Quần", .8, 0, 0, .5)])["idle_by_product"]
+    assert len(idle) == 2 and all(r["share"] == 0. and r["idle_minutes"] == 0. for r in idle)
+
+
+def test_dashboard_actual_distribution_bins_and_stats(monkeypatch):
+    rows = [("Áo", .8, 0, 0, a) for a in (.1, .2, .3, .4)]
+    dist = _dashboard_charts(monkeypatch, rows)["actual_distribution"]
+    assert [(b["low"], b["high"]) for b in dist["bins"]] == [
+        (0., .05), (.05, .1), (.1, .15), (.15, .2), (.2, .25), (.25, .3), (.3, .35), (.35, .4)]
+    assert [b["count"] for b in dist["bins"]] == [0, 0, 1, 0, 1, 0, 1, 1]
+    assert sum(b["count"] for b in dist["bins"]) == 4
+    stats = dist["stats"]
+    assert stats["count"] == 4 and stats["mean"] == pytest.approx(.25)
+    assert stats["median"] == pytest.approx(.25) and stats["std"] == pytest.approx(.1118033989)
+    assert stats["p10"] == pytest.approx(.13) and stats["p90"] == pytest.approx(.37)
+    assert stats["min"] == .1 and stats["max"] == .4 and stats["below_target_share"] == 1.
+
+
+def test_dashboard_actual_distribution_edges(monkeypatch):
+    # max đúng biên 0.15: bin cuối [0.1, 0.15] gồm cả biên trên
+    dist = _dashboard_charts(monkeypatch, [("Áo", .1, 0, 0, .15), ("Áo", .1, 0, 0, .1)])["actual_distribution"]
+    assert [b["count"] for b in dist["bins"]] == [0, 0, 2]
+    assert dist["bins"][-1]["high"] == .15
+    # biên giữa 0.1 thuộc bin [0.1, 0.15)
+    dist = _dashboard_charts(monkeypatch, [("Áo", .1, 0, 0, .1), ("Áo", .1, 0, 0, .12)])["actual_distribution"]
+    assert [b["count"] for b in dist["bins"]] == [0, 0, 2]
+    dist = _dashboard_charts(monkeypatch, [("Áo", .1, 0, 0, .05), ("Áo", .1, 0, 0, .12)])["actual_distribution"]
+    assert [b["count"] for b in dist["bins"]] == [0, 1, 1]
+    # actual > 1 và actual = 0
+    dist = _dashboard_charts(monkeypatch, [("Áo", .9, 0, 0, 1.02), ("Áo", .9, 0, 0, 0.)])["actual_distribution"]
+    assert len(dist["bins"]) == 21 and dist["bins"][-1]["high"] == 1.05
+    assert dist["bins"][0]["count"] == 1 and dist["bins"][-1]["count"] == 1
+    assert dist["stats"]["max"] == 1.02 and dist["stats"]["below_target_share"] == .5
+
+
+def test_dashboard_actual_distribution_single_shift_and_zero(monkeypatch):
+    dist = _dashboard_charts(monkeypatch, [("Áo", .8, 0, 0, .735)])["actual_distribution"]
+    assert sum(b["count"] for b in dist["bins"]) == 1 and len(dist["bins"]) == 15
+    assert dist["stats"]["count"] == 1 and dist["stats"]["std"] == 0.
+    assert dist["stats"]["mean"] == dist["stats"]["median"] == dist["stats"]["p10"] == .735
+    assert dist["stats"]["below_target_share"] == 1.
+    dist = _dashboard_charts(monkeypatch, [("Áo", .8, 0, 0, 0.)])["actual_distribution"]
+    assert dist["bins"] == [{"low": 0., "high": .05, "count": 1}]
+
+
+def test_dashboard_actual_distribution_follows_filter_on_real_data(frame, monkeypatch):
+    record = _record(frame)
+    monkeypatch.setattr(services, "_get_dataset", lambda path=config.SOURCE: record)
+    name = frame.iloc[0]["product"]
+    subset = record["valid"].loc[record["valid"]["product"] == name]
+    charts = services.get_management_dashboard(name)["charts"]
+    dist = charts["actual_distribution"]
+    assert sum(b["count"] for b in dist["bins"]) == dist["stats"]["count"] == len(subset)
+    assert dist["stats"]["below_target_share"] == pytest.approx((subset["actual"] < subset["target"]).mean())
+    assert len(charts["overtime_vs_actual"]) == len(subset)
+    assert sum(r["shifts"] for r in charts["idle_by_product"]) == len(subset)
+    all_idle = services.get_management_dashboard()["charts"]["idle_by_product"]
+    assert sum(r["share"] for r in all_idle) == pytest.approx(1.)
+    assert [r["idle_minutes"] for r in all_idle] == sorted((r["idle_minutes"] for r in all_idle), reverse=True)
+
+
+def test_dashboard_new_charts_empty_set(monkeypatch):
+    charts = _dashboard_charts(monkeypatch, [("Áo", .8, 0, 0, .4)], "no such product")
+    assert charts["overtime_vs_actual"] == [] and charts["idle_by_product"] == []
+    assert charts["actual_distribution"] == {"bins": [], "stats": None}
 
 
 def test_dashboard_empty_filter_and_invalid_rows_use_null_not_nonfinite(monkeypatch):

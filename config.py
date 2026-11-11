@@ -53,6 +53,9 @@ HISTORY_RANGES = {"target": (0., 1.), "smv": (0.01, 1000.), "workers": (0., 1000
 INPUT_RANGES = {"target": (0., 1.), "smv": (0.01, 1000.), "workers": (2., 89.),
                 "overtime": (0., 25920.), "bonus": (0., 1_000_000.), "idle": (0., 300.)}
 INTEGER_INPUTS = {"overtime", "bonus", "idle"}
+# The form takes overtime minutes per full-shift worker; the model still gets the team total.
+# 720 is the largest per-worker value in the history (12 hours).
+OVERTIME_PER_WORKER_MAX = 720.
 WORKER_STEP = 0.5
 
 # Bounded option search. Recommendation ceilings are derived from the valid
@@ -60,4 +63,4 @@ WORKER_STEP = 0.5
 RECOMMENDATION_QUANTILE = 0.95
 RECOMMENDATION_AXIS_POINTS = 8
 MAX_AXIS_CANDIDATES = 256
-MAX_COMBINED_CANDIDATES = 512
+MAX_COMBINED_CANDIDATES = 8192  # 9^4 = 6561 lưới đầy đủ (4 trục × 8 điểm + giữ nguyên)

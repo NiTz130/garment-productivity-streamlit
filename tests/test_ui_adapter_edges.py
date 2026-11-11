@@ -15,10 +15,9 @@ LIMITS = {
     "bonus": {"min": 0.0, "max": 746709.0, "unit": "VND"},
     "idle": {"min": 0.0, "max": 300.0, "unit": "phút"},
 }
-LABOR = {"full_shift_workers_min": 2, "full_shift_workers_max_without_half": 89,
-         "full_shift_workers_max_with_half": 88}
+LABOR = {"full_shift_workers_min": 2, "half_shift_workers_min": 0, "converted_workers_max": 89}
 ITEM = {"sku": "S", "product": "Áo", "smv": 18.5, "key": "k"}
-FORM = {"target": "80", "full_shift_workers": "30", "has_half_shift_worker": False,
+FORM = {"target": "80", "full_shift_workers": "30", "half_shift_workers": "0",
         "overtime": "10", "bonus": "0", "idle": "0"}
 
 
@@ -65,7 +64,7 @@ def test_workers_below_minimum_is_rejected():
 
 
 def test_integer_field_below_catalog_minimum_and_above_maximum():
-    low = ui_adapter.parse_form({**FORM, "overtime": "1"}, ITEM, catalog())
+    low = ui_adapter.parse_form({**FORM, "full_shift_workers": "2", "overtime": "1"}, ITEM, catalog())  # tổng cả tổ 2 < 5
     assert low["errors"]["overtime"].startswith("Giá trị tối thiểu là 5")
     high = ui_adapter.parse_form({**FORM, "idle": "301"}, ITEM, catalog())
     assert high["errors"]["idle"].startswith("Vượt giới hạn 300")

@@ -1,7 +1,7 @@
 """Translate the browser's editable strings into the backend's input contract."""
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 import json
 import math
 from pathlib import Path
@@ -11,11 +11,12 @@ import config
 import services
 
 
-FORM_FIELDS = ("target", "full_shift_workers", "overtime", "bonus", "idle")
+FORM_FIELDS = ("target", "full_shift_workers", "half_shift_workers", "overtime", "bonus", "idle")
 FIELD_LABELS = {
     "target": "Mục tiêu",
     "full_shift_workers": "Nhân công cả ca",
-    "overtime": "Tổng tăng ca",
+    "half_shift_workers": "Nhân công nửa ca",
+    "overtime": "Tăng ca mỗi người",
     "bonus": "Tiền thưởng",
     "idle": "Máy dừng",
 }
@@ -36,6 +37,10 @@ def catalog_for_frontend(catalog: dict) -> dict:
     result["items"] = [
         {**item, "key": catalog_item_key(item)} for item in catalog.get("items", [])
     ]
+    result["input_limits"] = {
+        **catalog.get("input_limits", {}),
+        "overtime_per_worker": {"min": 0.0, "max": config.OVERTIME_PER_WORKER_MAX, "unit": "phút/người"},
+    }
     return result
 
 
@@ -108,7 +113,13 @@ def parse_form(form: dict, selected_item: dict | None, catalog: dict) -> dict:
     full_workers = _read_number(
         form.get("full_shift_workers"), "full_shift_workers", errors, missing, integer=True
     )
-    overtime = _read_number(form.get("overtime"), "overtime", errors, missing, integer=True)
+    # A blank half-shift count means nobody works half a shift.
+    half_blank = form.get("half_shift_workers") is None or str(form.get("half_shift_workers")).strip() == ""
+    half_workers = Decimal(0) if half_blank else _read_number(
+        form.get("half_shift_workers"), "half_shift_workers", errors, missing, integer=True
+    )
+    # Per-person minutes; decimals are allowed so an applied option's team total survives the round trip.
+    overtime_per_person = _read_number(form.get("overtime"), "overtime", errors, missing)
     bonus = _read_number(form.get("bonus"), "bonus", errors, missing, integer=True)
     idle = _read_number(form.get("idle"), "idle", errors, missing, integer=True)
 
@@ -121,19 +132,26 @@ def parse_form(form: dict, selected_item: dict | None, catalog: dict) -> dict:
         elif target_ratio > Decimal(str(target_limit.get("max", 1))):
             errors["target"] = "Mục tiêu vượt giới hạn cho phép."
 
-    has_half_shift_worker = bool(form.get("has_half_shift_worker", False))
+    labor = catalog.get("labor_entry", {})
+    maximum = Decimal(str(labor.get("converted_workers_max", 0)))
     if full_workers is not None:
-        labor = catalog.get("labor_entry", {})
         minimum = Decimal(str(labor.get("full_shift_workers_min", 0)))
-        maximum_key = (
-            "full_shift_workers_max_with_half" if has_half_shift_worker
-            else "full_shift_workers_max_without_half"
-        )
-        maximum = Decimal(str(labor.get(maximum_key, 0)))
         if full_workers < minimum:
             errors["full_shift_workers"] = f"Tối thiểu {minimum:g} người cả ca."
         elif full_workers > maximum:
-            errors["full_shift_workers"] = f"Tối đa {maximum:g} người cả ca với lựa chọn hiện tại."
+            errors["full_shift_workers"] = f"Tối đa {maximum:g} người cả ca."
+        elif half_workers is not None and full_workers + half_workers / 2 > maximum:
+            errors["half_shift_workers"] = (
+                f"Tổng quy đổi tối đa {maximum:g} lao động/ca; mỗi người nửa ca tính 0,5.")
+
+    overtime = None
+    per_person_limit = limits.get("overtime_per_worker")
+    if overtime_per_person is not None and per_person_limit is not None:
+        if overtime_per_person > Decimal(str(per_person_limit.get("max", math.inf))):
+            errors["overtime"] = f"Vượt giới hạn {per_person_limit['max']:,.0f} phút mỗi người."
+    # Only full-shift workers count toward overtime; the half-shift worker does not.
+    if overtime_per_person is not None and full_workers is not None and "overtime" not in errors:
+        overtime = (overtime_per_person * full_workers).to_integral_value(rounding=ROUND_HALF_UP)
 
     parsed_fields = {"overtime": overtime, "bonus": bonus, "idle": idle}
     for field, number in parsed_fields.items():
@@ -145,7 +163,8 @@ def parse_form(form: dict, selected_item: dict | None, catalog: dict) -> dict:
         if number < minimum:
             errors[field] = f"Giá trị tối thiểu là {minimum:g}."
         elif number > maximum:
-            errors[field] = f"Vượt giới hạn {maximum:,.0f} {field_limit.get('unit', '')}.".strip()
+            errors[field] = (f"Tổng cả tổ vượt giới hạn {maximum:,.0f} phút." if field == "overtime"
+                             else f"Vượt giới hạn {maximum:,.0f} {field_limit.get('unit', '')}.".strip())
 
     smv = None
     if selected_item is not None:
@@ -163,7 +182,7 @@ def parse_form(form: dict, selected_item: dict | None, catalog: dict) -> dict:
         }
 
     assert target_percent is not None
-    assert full_workers is not None and overtime is not None and bonus is not None and idle is not None
+    assert full_workers is not None and half_workers is not None and overtime is not None and bonus is not None and idle is not None
     assert smv is not None
     return {
         "ok": True,
@@ -173,7 +192,7 @@ def parse_form(form: dict, selected_item: dict | None, catalog: dict) -> dict:
             "target": float(target_percent / Decimal(100)),
             "smv": float(smv),
             "full_shift_workers": int(full_workers),
-            "has_half_shift_worker": has_half_shift_worker,
+            "half_shift_workers": int(half_workers),
             "overtime": int(overtime),
             "bonus": int(bonus),
             "idle": int(idle),

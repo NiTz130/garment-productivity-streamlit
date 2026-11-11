@@ -33,6 +33,7 @@
             <label for="product-search">Mẫu hàng</label>
             <div class="combobox-wrap">
               <input id="product-search" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="product-options" autocomplete="off" placeholder="Tìm theo SKU hoặc tên sản phẩm" aria-describedby="error-product">
+              <button type="button" class="combobox-clear" id="product-clear" aria-label="Xóa mẫu hàng đã chọn"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M3.5 3.5l9 9m0-9l-9 9" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg></button>
               <span class="select-chevron" aria-hidden="true">⌄</span>
               <div class="combobox-options" id="product-options" role="listbox" hidden></div>
             </div>
@@ -47,7 +48,7 @@
 
           <div class="field-group">
             <div class="label-line"><label for="target-input">Mục tiêu năng suất</label><span class="range-hint" id="range-target"></span></div>
-            <div class="input-with-unit"><input id="target-input" data-form-field="target" type="text" inputmode="decimal" autocomplete="off" placeholder="Ví dụ: 80" aria-describedby="error-target"><span>%</span></div>
+            <div class="input-with-unit"><input id="target-input" data-form-field="target" value="0" type="text" inputmode="decimal" autocomplete="off" placeholder="Ví dụ: 80" aria-describedby="error-target"><span>%</span></div>
             <p class="field-error" id="error-target" aria-live="polite"></p>
           </div>
 
@@ -56,26 +57,29 @@
             <div class="label-line"><label for="workers-input">Số người làm cả ca</label><span class="range-hint" id="range-workers"></span></div>
             <div class="input-with-unit"><input id="workers-input" data-form-field="full_shift_workers" type="text" inputmode="numeric" autocomplete="off" placeholder="Số nguyên" aria-describedby="error-full_shift_workers"><span>người</span></div>
             <p class="field-error" id="error-full_shift_workers" aria-live="polite"></p>
-            <label class="check-row" for="half-shift-input"><input id="half-shift-input" data-form-field="has_half_shift_worker" type="checkbox"><span>Thêm 1 người làm nửa ca</span></label>
+            <div class="label-line"><label for="half-shift-input">Số người làm nửa ca</label><span class="range-hint">Mỗi người tính 4 giờ (0,5 ca)</span></div>
+            <div class="input-with-unit"><input id="half-shift-input" data-form-field="half_shift_workers" type="text" inputmode="numeric" autocomplete="off" placeholder="0" aria-describedby="error-half_shift_workers"><span>người</span></div>
+            <p class="field-error" id="error-half_shift_workers" aria-live="polite"></p>
             <div class="labor-total"><span id="labor-summary">Nhập số người làm cả ca</span><strong id="labor-converted">Quy đổi: — lao động/ca</strong></div>
           </fieldset>
 
           <div class="paired-fields">
             <div class="field-group">
-              <div class="label-line"><label for="overtime-input">Tổng tăng ca</label><span class="range-hint" id="range-overtime"></span></div>
-              <div class="input-with-unit"><input id="overtime-input" data-form-field="overtime" type="text" inputmode="numeric" autocomplete="off" placeholder="0 hợp lệ" aria-describedby="error-overtime"><span>phút</span></div>
+              <div class="label-line"><label for="overtime-input">Tăng ca mỗi người</label><span class="range-hint" id="range-overtime"></span></div>
+              <div class="input-with-unit"><input id="overtime-input" data-form-field="overtime" value="0" type="text" inputmode="numeric" autocomplete="off" placeholder="0 hợp lệ" aria-describedby="overtime-total error-overtime"><span>phút</span></div>
+              <p class="field-help" id="overtime-total"></p>
               <p class="field-error" id="error-overtime" aria-live="polite"></p>
             </div>
             <div class="field-group">
               <div class="label-line"><label for="idle-input">Máy dừng</label><span class="range-hint" id="range-idle"></span></div>
-              <div class="input-with-unit"><input id="idle-input" data-form-field="idle" type="text" inputmode="numeric" autocomplete="off" placeholder="0 hợp lệ" aria-describedby="error-idle"><span>phút</span></div>
+              <div class="input-with-unit"><input id="idle-input" data-form-field="idle" value="0" type="text" inputmode="numeric" autocomplete="off" placeholder="0 hợp lệ" aria-describedby="error-idle"><span>phút</span></div>
               <p class="field-error" id="error-idle" aria-live="polite"></p>
             </div>
           </div>
 
           <div class="field-group bonus-field">
             <div class="label-line"><label for="bonus-input">Tiền thưởng</label><span class="range-hint" id="range-bonus"></span></div>
-            <div class="input-with-unit"><input id="bonus-input" data-form-field="bonus" type="text" inputmode="numeric" autocomplete="off" placeholder="VNĐ nguyên" aria-describedby="typical-bonus error-bonus"><span>VNĐ</span></div>
+            <div class="input-with-unit"><input id="bonus-input" data-form-field="bonus" value="0" type="text" inputmode="numeric" autocomplete="off" placeholder="VNĐ nguyên" aria-describedby="typical-bonus error-bonus"><span>VNĐ</span></div>
             <p class="field-help" id="typical-bonus" hidden></p>
             <p class="field-error" id="error-bonus" aria-live="polite"></p>
           </div>
@@ -158,10 +162,25 @@
           <p class="chart-empty" id="comparison-empty" hidden>Không có dữ liệu sản phẩm trong bộ lọc này.</p>
         </article>
         <article class="card chart-card">
-          <div class="chart-heading"><div><h2>Tiền thưởng và năng suất</h2><p class="muted">Mỗi điểm là một ca; trục ngang là tiền thưởng VNĐ, theo thang căn bậc hai.</p></div><div class="legend"><span><i class="legend-dot achieved-dot"></i>Đạt mục tiêu</span><span><i class="legend-dot missed-dot"></i>Chưa đạt (tam giác)</span></div></div>
-          <div class="chart-area" id="bonus-chart" role="group" aria-label="Biểu đồ phân tán tiền thưởng và năng suất thực tế"></div>
+          <div class="chart-heading"><div><h2>Máy dừng theo sản phẩm</h2><p class="muted">Phần của mỗi sản phẩm trong tổng phút máy dừng.</p></div></div>
+          <div class="chart-area" id="idle-chart" role="group" aria-label="Biểu đồ vành khuyên: cơ cấu phút máy dừng theo sản phẩm"></div>
+          <p class="chart-empty" id="idle-empty" hidden>Không có phút máy dừng trong bộ lọc này.</p>
+        </article>
+        <article class="card chart-card">
+          <div class="chart-heading"><div><h2>Tiền thưởng và năng suất</h2><p class="muted">Ca được thưởng càng cao thì có càng nhiều ca đạt mục tiêu không? Mỗi chấm là tỷ lệ ca đạt mục tiêu của một mức thưởng (VNĐ mỗi ca).</p></div><div class="legend"><span><i class="legend-dash"></i>Tỷ lệ chung của mọi ca</span></div></div>
+          <div class="chart-area" id="bonus-chart" role="group" aria-label="Biểu đồ chấm: tỷ lệ ca đạt mục tiêu theo mức tiền thưởng"></div>
           <p class="chart-empty" id="bonus-empty" hidden>Không có điểm dữ liệu trong bộ lọc này.</p>
-          <p class="chart-footnote">Tiền thưởng theo ca; không đại diện cho tổng chi phí sản xuất.</p>
+        </article>
+        <article class="card chart-card">
+          <div class="chart-heading"><div><h2>Tăng ca và năng suất</h2><p class="muted">Mỗi chấm là một ca sản xuất.</p></div></div>
+          <div class="chart-area" id="overtime-chart" role="group" aria-label="Biểu đồ phân tán: phút tăng ca và năng suất thực tế của từng ca"></div>
+          <p class="chart-empty" id="overtime-empty" hidden>Không có ca đủ dữ liệu tăng ca và năng suất trong bộ lọc này.</p>
+        </article>
+        <article class="card chart-card chart-wide">
+          <div class="chart-heading"><div><h2>Phân bố năng suất thực tế</h2><p class="muted">Mỗi cột là số ca trong một khoảng năng suất.</p></div><div class="legend"><span><i class="legend-swatch hist-swatch"></i>Số ca</span><span><i class="legend-line is-solid"></i>Trung bình</span><span><i class="legend-line is-dashed"></i>Trung vị</span><span><i class="legend-swatch band-swatch"></i>Vùng p10–p90 (80% số ca)</span></div></div>
+          <div class="chart-area" id="distribution-chart" role="group" aria-label="Biểu đồ cột: phân bố năng suất thực tế của các ca"></div>
+          <p class="chart-empty" id="distribution-empty" hidden>Không có ca nào để vẽ phân bố trong bộ lọc này.</p>
+          <p class="chart-summary" id="distribution-summary"></p>
         </article>
       </section>
 
