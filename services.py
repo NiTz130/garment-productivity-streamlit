@@ -340,16 +340,8 @@ def recommend_options(inputs: dict) -> dict:
                                  config.MAX_AXIS_CANDIDATES, multiplier=2)
     overtime_values = _axis_values(base["overtime"], max(base["overtime"], limits["overtime"]["max"]),
                                    config.MAX_AXIS_CANDIDATES)
-    worker_candidates = []
-    for value in worker_values:
-        candidate = dict(base)
-        candidate["workers"] = value
-        worker_candidates.append(candidate)
-    overtime_candidates = []
-    for value in overtime_values:
-        candidate = dict(base)
-        candidate["overtime"] = value
-        overtime_candidates.append(candidate)
+    worker_candidates = [{**base, "workers": value} for value in worker_values]
+    overtime_candidates = [{**base, "overtime": value} for value in overtime_values]
 
     combined_worker_values = _axis_values(base["workers"],
                                            max(base["workers"], limits["workers"]["max"]),

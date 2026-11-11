@@ -19,14 +19,6 @@ def _normalized(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def rename_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Strict compatibility helper returning the nine source fields in model form."""
-    result = _normalized(df)
-    if not set(config.DATA_COLUMNS).issubset(result.columns):
-        raise ValueError("LỖI: Tệp dữ liệu thiếu cột bắt buộc.")
-    return result[config.DATA_COLUMNS].copy()
-
-
 def read_workbook(source=config.SOURCE) -> pd.DataFrame:
     """Read the first Excel sheet; byte sources are kept in memory."""
     if isinstance(source, (bytes, bytearray, memoryview)):
@@ -184,16 +176,6 @@ def quality_report(df: pd.DataFrame) -> dict:
         "invalid_rows": sorted(invalid_rows),
         "trainable": trainable,
     }
-
-
-def drop_exact_duplicates(df: pd.DataFrame) -> pd.DataFrame:
-    """Drop duplicate source records from the working copy only."""
-    frame = _normalized(df)
-    if not set(config.DATA_COLUMNS).issubset(frame.columns):
-        raise ValueError("LỖI: Cần đủ chín cột trước khi loại dòng trùng.")
-    cleaned = frame.loc[~frame[config.DATA_COLUMNS].duplicated(keep="first")].copy()
-    cleaned.attrs["source_column_count"] = df.attrs.get("source_column_count", len(df.columns))
-    return cleaned
 
 
 def dataset_fingerprint(df: pd.DataFrame) -> str:

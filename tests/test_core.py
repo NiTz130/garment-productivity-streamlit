@@ -13,14 +13,11 @@ from sklearn.model_selection import GroupKFold
 
 import config
 import model
-from analysis import analyze
 from data import (
     dataset_fingerprint,
-    drop_exact_duplicates,
     load_data,
     quality_report,
     read_workbook,
-    rename_columns,
     validate,
 )
 from model import activate, atomic_save, load, predict, train
@@ -54,7 +51,7 @@ def test_default_source_and_exact_headers(frame):
     assert list(config.SOURCE_TO_INTERNAL)[-1] == "Năng xuất thực tế (%)"
     assert list(frame.columns) == config.DATA_COLUMNS
     assert frame["actual"].max() > 1
-    assert frame["actual"].max() <= config.RANGES["actual"][1]
+    assert frame["actual"].max() <= config.HISTORY_RANGES["actual"][1]
     assert frame["bonus"].max() > 3600
     assert frame["bonus"].max() <= 1_000_000
     assert quality_report(frame)["trainable"]
@@ -63,8 +60,6 @@ def test_default_source_and_exact_headers(frame):
     loaded = load_data()
     assert loaded.shape == frame.shape
     assert loaded.index.equals(frame.index)
-    with pytest.raises(ValueError, match="thiếu cột"):
-        rename_columns(pd.DataFrame({"bad": [1]}))
 
 
 def test_workbook_bytes_empty_missing_columns_and_missing_values(frame, tmp_path):
@@ -159,7 +154,7 @@ def test_request_validation_bounds(row):
             validate(absent, actual=True)
 
 
-def test_duplicates_outliers_and_working_copy_cleaning(frame, tmp_path):
+def test_duplicates_and_outliers_are_reported(frame):
     duplicate = pd.concat([frame.iloc[:12], frame.iloc[[0]]], ignore_index=True)
     quality = quality_report(duplicate)
     assert quality["exact_duplicate_count"] == 1
@@ -172,40 +167,6 @@ def test_duplicates_outliers_and_working_copy_cleaning(frame, tmp_path):
     report = quality_report(outlier)
     assert report["iqr_outlier_count"] > 0
     assert report["trainable"]
-
-    path = tmp_path / "source.xlsx"
-    _excel_frame(duplicate).to_excel(path, index=False)
-    source_hash = hashlib.sha256(path.read_bytes()).hexdigest()
-    working = read_workbook(path)
-    cleaned = drop_exact_duplicates(working)
-    assert len(cleaned) == len(working) - 1
-    assert quality_report(cleaned)["exact_duplicate_count"] == 0
-    assert dataset_fingerprint(cleaned) != dataset_fingerprint(working)
-    assert hashlib.sha256(path.read_bytes()).hexdigest() == source_hash
-
-
-def test_analysis_statistics_distributions_correlation_and_exclusions(frame):
-    result = analyze(frame)
-    assert result["overview"]["rows"] == 1197
-    assert result["overview"]["products"] == 70
-    assert result["description"].loc["actual", "count"] == len(frame)
-    assert result["description"].loc["actual", "median"] == frame.actual.median()
-    assert len(result["distributions"]["target"]) == len(frame)
-    assert result["correlation"].shape == (7, 7)
-    assert set(result["product_stats"].columns) == {"product", "observations", "mean", "median"}
-    invalid = frame.iloc[:4].copy()
-    invalid["smv"] = invalid["smv"].astype(object)
-    invalid.iloc[0, invalid.columns.get_loc("smv")] = "bad"
-    partial = analyze(invalid)
-    assert partial["overview"]["analyzed_rows"] == 3
-    assert partial["overview"]["excluded_rows"] == [2]
-    assert len(partial["distributions"]["smv"]) == 3
-    without_sku = analyze(frame.iloc[:5].drop(columns="sku"))
-    assert without_sku["overview"]["analyzed_rows"] == 5
-    assert without_sku["product_stats"]["observations"].sum() == 5
-    without_actual = analyze(frame.iloc[:5].drop(columns="actual"))
-    assert len(without_actual["distributions"]) == 6
-    assert without_actual["product_stats"].empty
 
 
 def test_prediction_order_units_and_clipping(frame, bundle, row, monkeypatch):

@@ -15,7 +15,7 @@ Mở `http://127.0.0.1:8501`. Component dùng CSS, HTML và JavaScript cục b�
 
 Lệnh huấn luyện chỉ cần chạy khi cài mới hoặc thay dataset. Git không lưu thư mục `runtime/`; một bản clone mới cần tạo model VNĐ trước khi dự báo. Trang thống kê vẫn đọc được lịch sử khi chưa có model.
 
-Frontend có hai trang theo bản thiết kế Stitch trong `docs/`: dự báo tự động sau 300 ms dừng gõ, và thống kê quản trị với bộ lọc sản phẩm, biểu đồ, bảng chín trường. Nhân công nhập người cả ca cùng lựa chọn thêm một người nửa ca. Khi chưa đạt mục tiêu, hệ thống so sánh ba hướng điều chỉnh; hướng kết hợp cho phép giữ nguyên một thông số đã chạm trần và thay đổi ít nhất hai thông số còn lại.
+Frontend có hai trang theo quy tắc thiết kế trong `docs/thiet-ke/he-thong-thiet-ke/DESIGN.md`: dự báo tự động sau 300 ms dừng gõ, và thống kê quản trị với bộ lọc sản phẩm, biểu đồ, bảng chín trường. Nhân công nhập người cả ca cùng lựa chọn thêm một người nửa ca. Khi chưa đạt mục tiêu, hệ thống so sánh ba hướng điều chỉnh; hướng kết hợp cho phép giữ nguyên một thông số đã chạm trần và thay đổi ít nhất hai thông số còn lại.
 
 ```powershell
 python -X utf8 -m pytest -q --basetemp=.tmp/pytest-final

@@ -48,7 +48,6 @@ LABELS = {"target": "Năng suất mục tiêu", "smv": "Định mức (phút/s�
 HISTORY_RANGES = {"target": (0., 1.), "smv": (0.01, 1000.), "workers": (0., 1000.),
                   "overtime": (0., 25920.), "bonus": (0., None), "idle": (0., 300.),
                   "actual": (0., 2.)}
-RANGES = HISTORY_RANGES  # Backward-compatible name for historical dataset checks.
 
 # New shift entry rules. The API derives the bonus ceiling from valid VNĐ history.
 INPUT_RANGES = {"target": (0., 1.), "smv": (0.01, 1000.), "workers": (2., 89.),
@@ -62,4 +61,3 @@ RECOMMENDATION_QUANTILE = 0.95
 RECOMMENDATION_AXIS_POINTS = 8
 MAX_AXIS_CANDIDATES = 256
 MAX_COMBINED_CANDIDATES = 512
-LOW_R2 = .5
