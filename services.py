@@ -539,3 +539,4 @@ def get_management_dashboard(product: str | None = None) -> dict:
         },
         "history": history,
     }
+

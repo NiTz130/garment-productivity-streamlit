@@ -271,3 +271,4 @@ def load_dashboard(product: str | None) -> dict:
             "dashboard": None,
             "message": "Chưa tải được thống kê. Vui lòng thử lại sau.",
         }
+
