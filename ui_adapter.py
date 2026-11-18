@@ -204,11 +204,11 @@ def run_prediction(inputs: dict) -> dict:
     """Call the facade and convert expected readiness failures to safe UI text."""
     try:
         return {"ok": True, "result": services.predict_shift(inputs), "message": None}
-    except (OSError, EOFError, ValueError, TypeError, RuntimeError):
+    except (OSError, EOFError, ValueError, TypeError, RuntimeError) as exc:
         return {
             "ok": False,
             "result": None,
-            "message": "Model hoặc dữ liệu chưa sẵn sàng dự báo. Cần model tương thích đơn vị VNĐ.",
+            "message": str(exc) if str(exc).startswith("LỖI:") else "Chưa thể chuẩn bị model VNĐ hoặc dữ liệu dự báo. Kiểm tra dataset và quyền ghi thư mục runtime/.",
             "kind": "model_unavailable",
         }
     except Exception:

@@ -64,20 +64,34 @@ def _get_dataset(path=config.SOURCE) -> dict:
 
 def _get_model(data: dict, path=config.MODEL) -> dict:
     path = Path(path)
-    signature = _file_signature(path)
     cache_key = str(path.resolve())
+    try:
+        signature = _file_signature(path)
+    except FileNotFoundError:
+        signature = None
     cached = _MODEL_CACHE.get(cache_key)
-    if (cached is not None and cached["signature"] == signature
+    if (signature is not None and cached is not None and cached["signature"] == signature
             and cached["dataset_signature"] == data["signature"]
             and cached["dataset_fingerprint"] == data["fingerprint"]):
         return cached["bundle"]
-    bundle = model.load(path)
-    model.assert_compatible(bundle)
-    metadata = bundle["metadata"]
-    if metadata.get("dataset_fingerprint") != data["fingerprint"]:
-        raise ValueError(
-            "LỖI: Dataset vận hành đã đổi so với model; cần huấn luyện model mới bằng dataset VNĐ."
-        )
+    bundle = None
+    if signature is not None:
+        try:
+            candidate = model.load(path)
+            model.assert_compatible(candidate)
+            if candidate["metadata"].get("dataset_fingerprint") == data["fingerprint"]:
+                bundle = candidate
+        except (OSError, EOFError, ValueError, TypeError):
+            # Missing, damaged, legacy-unit, or schema-incompatible bundles are rebuilt
+            # from the currently validated operational workbook below.
+            bundle = None
+    if bundle is None:
+        if not data["quality"]["trainable"]:
+            raise ValueError("LỖI: Dataset vận hành không đủ điều kiện huấn luyện model VNĐ.")
+        bundle = model.train(data["frame"], dataset_hash=data["fingerprint"])
+        # activate() preserves an existing legacy/corrupt bundle as a backup.
+        model.activate(bundle, path)
+        signature = _file_signature(path)
     _MODEL_CACHE[cache_key] = {
         "signature": signature,
         "dataset_signature": data["signature"],

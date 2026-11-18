@@ -7,13 +7,12 @@
 ```powershell
 Set-Location <thư mục chứa repo>
 python -m pip install -r requirements.txt
-python -X utf8 -c "from data import load_data; import model; bundle = model.train(load_data()); model.activate(bundle); print(bundle['selected_model'])"
 python -m streamlit run app.py --server.address 127.0.0.1
 ```
 
 Mở `http://127.0.0.1:8501`. Component dùng CSS, HTML và JavaScript cục bộ trong `frontend/`; không cần lệnh build, Node runtime, Tailwind CDN hay Google Fonts để chạy.
 
-Lệnh huấn luyện chỉ cần chạy khi cài mới hoặc thay dataset. Git không lưu thư mục `runtime/`; một bản clone mới cần tạo model VNĐ trước khi dự báo. Trang thống kê vẫn đọc được lịch sử khi chưa có model.
+Git không lưu thư mục `runtime/`. Khi dự báo lần đầu, ứng dụng tự huấn luyện và lưu model VNĐ từ workbook vận hành. Ứng dụng tự huấn luyện lại nếu model thiếu, hỏng, không tương thích hoặc fingerprint dataset thay đổi; không cần lệnh huấn luyện riêng. Nếu dataset không đủ điều kiện hoặc không ghi được `runtime/`, giao diện báo nguyên nhân cụ thể.
 
 Frontend có hai trang theo quy tắc thiết kế trong `docs/thiet-ke/he-thong-thiet-ke/DESIGN.md`: dự báo tự động sau 300 ms dừng gõ, và thống kê quản trị với bộ lọc sản phẩm, biểu đồ, bảng chín trường. Nhân công nhập người cả ca cùng lựa chọn thêm một người nửa ca. Khi chưa đạt mục tiêu, hệ thống so sánh ba hướng điều chỉnh; hướng kết hợp cho phép giữ nguyên một thông số đã chạm trần và thay đổi ít nhất hai thông số còn lại.
 
