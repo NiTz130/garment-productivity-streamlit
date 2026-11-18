@@ -711,7 +711,6 @@ function renderOptions(runtime, data, status, prediction, stale) {
     workers: ["PHƯƠNG ÁN 1", "Bổ sung nhân lực"],
     overtime: ["PHƯƠNG ÁN 2", "Điều chỉnh tăng ca"],
     bonus: ["PHƯƠNG ÁN 3", "Tăng tiền thưởng"],
-    idle: ["PHƯƠNG ÁN 4", "Giảm thời gian máy dừng"],
     combined: ["PHƯƠNG ÁN 4", "Phương án kết hợp"],
   };
   const options = Array.isArray(data.recommendations.options) ? data.recommendations.options : [];

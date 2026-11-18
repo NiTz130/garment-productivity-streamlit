@@ -148,19 +148,14 @@ def _recommendation_limits(data: dict) -> dict:
     input_ranges = _input_ranges(data)
     definitions = {
         "workers": (config.WORKER_STEP, input_ranges["workers"][1], "trần nhân lực cho phép"),
-        "overtime": (1, config.INPUT_RANGES["overtime"][1],
-                     f"phân vị {config.RECOMMENDATION_QUANTILE:.0%} của dữ liệu hợp lệ, có chặn cấu hình"),
+        "overtime": (1, input_ranges["overtime"][1], "trần tăng ca cho phép"),
         "bonus": (1, input_ranges["bonus"][1], "trần tiền thưởng cho phép theo dữ liệu VNĐ"),
     }
     for field, (step, configured_max, basis) in definitions.items():
         if valid.empty:
             maximum = config.INPUT_RANGES[field][0]
         else:
-            if field == "overtime":
-                empirical = math.ceil(float(valid[field].quantile(config.RECOMMENDATION_QUANTILE)))
-                maximum = min(configured_max, empirical)
-            else:
-                maximum = configured_max
+            maximum = configured_max
         limits[field] = {
             "min": config.INPUT_RANGES[field][0],
             "max": maximum,
@@ -359,7 +354,7 @@ def recommend_options(inputs: dict) -> dict:
         "overtime": "Tăng ca",
         "bonus": "Tiền thưởng",
         "idle": "Giảm máy dừng",
-        "combined": "Kết hợp nhân lực, tăng ca, tiền thưởng và máy dừng",
+        "combined": "Kết hợp nhân lực, tăng ca và tiền thưởng",
     }
     if baseline["achieved"]:
         options = [
@@ -369,34 +364,35 @@ def recommend_options(inputs: dict) -> dict:
         return {"baseline": baseline, "options": options, "search_limit": config.MAX_COMBINED_CANDIDATES}
 
     limits = _recommendation_limits(data)
-    worker_values = ([limits["workers"]["max"]]
-                     if limits["workers"]["max"] > base["workers"] else [])
+    worker_values = _axis_values(base["workers"], limits["workers"]["max"],
+                                 config.MAX_AXIS_CANDIDATES, multiplier=2)
     overtime_values = _axis_values(base["overtime"], max(base["overtime"], limits["overtime"]["max"]),
                                    config.MAX_AXIS_CANDIDATES)
-    bonus_values = ([limits["bonus"]["max"]]
-                    if limits["bonus"]["max"] > base["bonus"] else [])
+    bonus_values = _axis_values(base["bonus"], limits["bonus"]["max"],
+                                config.MAX_AXIS_CANDIDATES)
     idle_values = _idle_values(base["idle"], config.MAX_AXIS_CANDIDATES)
     worker_candidates = [{**base, "workers": value} for value in worker_values]
     overtime_candidates = [{**base, "overtime": value} for value in overtime_values]
     bonus_candidates = [{**base, "bonus": value} for value in bonus_values]
     idle_candidates = [{**base, "idle": value} for value in idle_values]
 
-    combined_worker_values = [limits["workers"]["max"]]
+    combined_worker_values = _axis_values(base["workers"], limits["workers"]["max"],
+                                           config.RECOMMENDATION_AXIS_POINTS, multiplier=2)
     combined_overtime_values = _axis_values(base["overtime"],
                                              max(base["overtime"], limits["overtime"]["max"]),
-                                             config.RECOMMENDATION_AXIS_POINTS)
-    combined_bonus_values = [limits["bonus"]["max"]]
-    combined_idle_values = _idle_values(base["idle"], config.RECOMMENDATION_AXIS_POINTS)
+                                             64)
+    combined_bonus_values = _axis_values(base["bonus"], limits["bonus"]["max"],
+                                         config.RECOMMENDATION_AXIS_POINTS)
     combined_candidates = [
-        {**base, "workers": workers, "overtime": overtime, "bonus": bonus, "idle": idle}
-        for workers, overtime, bonus, idle in product(
-            combined_worker_values,
+        {**base, "workers": workers, "overtime": overtime, "bonus": bonus}
+        for workers, overtime, bonus in product(
+            [base["workers"], *combined_worker_values],
             [base["overtime"], *combined_overtime_values],
-            combined_bonus_values,
-            [base["idle"], *combined_idle_values],
+            [base["bonus"], *combined_bonus_values],
         )
-        if sum((workers != base["workers"], overtime != base["overtime"],
-                bonus != base["bonus"], idle != base["idle"])) >= 2
+        if overtime > base["overtime"]
+        and sum((workers != base["workers"], overtime != base["overtime"],
+                 bonus != base["bonus"])) >= 2
     ]
     if len(combined_candidates) > config.MAX_COMBINED_CANDIDATES:
         stride = len(combined_candidates) / config.MAX_COMBINED_CANDIDATES
@@ -413,7 +409,7 @@ def recommend_options(inputs: dict) -> dict:
         _evaluate_option("idle", names["idle"], base, baseline["value"], base["target"],
                          idle_candidates, bundle, limits, ("idle",)),
         _evaluate_option("combined", names["combined"], base, baseline["value"], base["target"],
-                         combined_candidates, bundle, limits, ("workers", "overtime", "bonus", "idle")),
+                         combined_candidates, bundle, limits, ("workers", "overtime", "bonus")),
     ]
     return {
         "baseline": baseline,
