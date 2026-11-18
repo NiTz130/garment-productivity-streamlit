@@ -105,7 +105,9 @@ def _input_ranges(data: dict) -> dict:
     ranges = dict(config.INPUT_RANGES)
     if len(data["valid"]):
         observed_max = float(data["valid"]["bonus"].max())
-        ranges["bonus"] = (ranges["bonus"][0], min(ranges["bonus"][1], math.ceil(observed_max)))
+        # Bonus input and recommendations use a practical VNĐ ceiling in 50k steps.
+        bonus_ceiling = math.ceil(observed_max / 50_000) * 50_000
+        ranges["bonus"] = (ranges["bonus"][0], min(ranges["bonus"][1], bonus_ceiling))
     return ranges
 
 
@@ -143,27 +145,28 @@ def normalize_shift_inputs(inputs: dict) -> dict:
 def _recommendation_limits(data: dict) -> dict:
     valid = data["valid"]
     limits = {}
+    input_ranges = _input_ranges(data)
     definitions = {
-        "workers": (config.WORKER_STEP, config.INPUT_RANGES["workers"][1]),
-        "overtime": (1, config.INPUT_RANGES["overtime"][1]),
-        "bonus": (1, config.INPUT_RANGES["bonus"][1]),
+        "workers": (config.WORKER_STEP, input_ranges["workers"][1], "trần nhân lực cho phép"),
+        "overtime": (1, config.INPUT_RANGES["overtime"][1],
+                     f"phân vị {config.RECOMMENDATION_QUANTILE:.0%} của dữ liệu hợp lệ, có chặn cấu hình"),
+        "bonus": (1, input_ranges["bonus"][1], "trần tiền thưởng cho phép theo dữ liệu VNĐ"),
     }
-    for field, (step, configured_max) in definitions.items():
+    for field, (step, configured_max, basis) in definitions.items():
         if valid.empty:
             maximum = config.INPUT_RANGES[field][0]
         else:
-            empirical = float(valid[field].quantile(config.RECOMMENDATION_QUANTILE))
-            if field == "workers":
-                empirical = math.floor(empirical / step) * step
+            if field == "overtime":
+                empirical = math.ceil(float(valid[field].quantile(config.RECOMMENDATION_QUANTILE)))
+                maximum = min(configured_max, empirical)
             else:
-                empirical = math.ceil(empirical)
-            maximum = min(configured_max, empirical)
+                maximum = configured_max
         limits[field] = {
             "min": config.INPUT_RANGES[field][0],
             "max": maximum,
             "step": step,
             "unit": _FIELD_UNITS[field],
-            "basis": f"phân vị {config.RECOMMENDATION_QUANTILE:.0%} của dữ liệu hợp lệ, có chặn cấu hình",
+            "basis": basis,
         }
     # Máy dừng chỉ giảm được, tối đa về 0; min/max chỉ dùng làm thang chấm mức can thiệp.
     limits["idle"] = {
@@ -366,34 +369,30 @@ def recommend_options(inputs: dict) -> dict:
         return {"baseline": baseline, "options": options, "search_limit": config.MAX_COMBINED_CANDIDATES}
 
     limits = _recommendation_limits(data)
-    worker_values = _axis_values(base["workers"], max(base["workers"], limits["workers"]["max"]),
-                                 config.MAX_AXIS_CANDIDATES, multiplier=2)
+    worker_values = ([limits["workers"]["max"]]
+                     if limits["workers"]["max"] > base["workers"] else [])
     overtime_values = _axis_values(base["overtime"], max(base["overtime"], limits["overtime"]["max"]),
                                    config.MAX_AXIS_CANDIDATES)
-    bonus_values = _axis_values(base["bonus"], max(base["bonus"], limits["bonus"]["max"]),
-                                config.MAX_AXIS_CANDIDATES)
+    bonus_values = ([limits["bonus"]["max"]]
+                    if limits["bonus"]["max"] > base["bonus"] else [])
     idle_values = _idle_values(base["idle"], config.MAX_AXIS_CANDIDATES)
     worker_candidates = [{**base, "workers": value} for value in worker_values]
     overtime_candidates = [{**base, "overtime": value} for value in overtime_values]
     bonus_candidates = [{**base, "bonus": value} for value in bonus_values]
     idle_candidates = [{**base, "idle": value} for value in idle_values]
 
-    combined_worker_values = _axis_values(base["workers"],
-                                           max(base["workers"], limits["workers"]["max"]),
-                                           config.RECOMMENDATION_AXIS_POINTS, multiplier=2)
+    combined_worker_values = [limits["workers"]["max"]]
     combined_overtime_values = _axis_values(base["overtime"],
                                              max(base["overtime"], limits["overtime"]["max"]),
                                              config.RECOMMENDATION_AXIS_POINTS)
-    combined_bonus_values = _axis_values(base["bonus"],
-                                         max(base["bonus"], limits["bonus"]["max"]),
-                                         config.RECOMMENDATION_AXIS_POINTS)
+    combined_bonus_values = [limits["bonus"]["max"]]
     combined_idle_values = _idle_values(base["idle"], config.RECOMMENDATION_AXIS_POINTS)
     combined_candidates = [
         {**base, "workers": workers, "overtime": overtime, "bonus": bonus, "idle": idle}
         for workers, overtime, bonus, idle in product(
-            [base["workers"], *combined_worker_values],
+            combined_worker_values,
             [base["overtime"], *combined_overtime_values],
-            [base["bonus"], *combined_bonus_values],
+            combined_bonus_values,
             [base["idle"], *combined_idle_values],
         )
         if sum((workers != base["workers"], overtime != base["overtime"],

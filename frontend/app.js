@@ -712,27 +712,30 @@ function renderOptions(runtime, data, status, prediction, stale) {
     overtime: ["PHƯƠNG ÁN 2", "Điều chỉnh tăng ca"],
     bonus: ["PHƯƠNG ÁN 3", "Tăng tiền thưởng"],
     idle: ["PHƯƠNG ÁN 4", "Giảm thời gian máy dừng"],
-    combined: ["PHƯƠNG ÁN 5", "Phương án kết hợp"],
+    combined: ["PHƯƠNG ÁN 4", "Phương án kết hợp"],
   };
   const options = Array.isArray(data.recommendations.options) ? data.recommendations.options : [];
-  for (const optionId of ["workers", "overtime", "bonus", "idle", "combined"]) {
+  for (const optionId of ["workers", "overtime", "bonus", "combined"]) {
     const option = options.find((row) => row.id === optionId);
     if (!option) continue;
     grid.appendChild(buildOptionCard(runtime, option, titles[optionId], optionId === "combined"));
   }
-  const usable = options.filter((row) => row.available && row.status !== "unavailable" && finite(row.prediction?.value) !== null);
-  if (usable.length) {
-    const reached = usable.filter((row) => row.achieved);
-    if (reached.length) {
-      summary.textContent = `${reached.length} trong ${usable.length} phương án đạt mục tiêu.`;
-    } else {
-      const best = usable.reduce((a, b) => (b.prediction.value > a.prediction.value ? b : a));
-      const shortfall = finite(best.difference_to_target);
-      summary.textContent = `Chưa phương án nào đạt mục tiêu. Cao nhất: ${formatPercent(best.prediction.value)}`
-        + (shortfall === null ? "." : ` (thiếu ${formatNumber(Math.abs(shortfall * 100), 1)} điểm %).`);
-    }
-    summary.hidden = false;
+  const visibleOptionIds = new Set(["workers", "overtime", "bonus", "combined"]);
+  const usable = options.filter((row) => visibleOptionIds.has(row.id)
+    && row.available && row.status !== "unavailable" && finite(row.prediction?.value) !== null);
+  const reached = usable.filter((row) => row.achieved);
+  if (!usable.length) {
+    summary.textContent = "Không tìm được phương án cải thiện trong giới hạn hiện tại. Hãy kiểm tra lại thông số ca hoặc trao đổi với quản lý để điều chỉnh giới hạn vận hành.";
+  } else if (reached.length) {
+    summary.textContent = `${reached.length} trong ${usable.length} phương án đạt mục tiêu.`;
+  } else {
+    const best = usable.reduce((a, b) => (b.prediction.value > a.prediction.value ? b : a));
+    const shortfall = finite(best.difference_to_target);
+    summary.textContent = `Các phương án đều chưa đạt mục tiêu. Tốt nhất: ${formatPercent(best.prediction.value)}`
+      + (shortfall === null ? "." : `, còn thiếu ${formatNumber(Math.abs(shortfall * 100), 1)} điểm %.`)
+      + " Áp dụng phương án tốt nhất để dự báo lại và nhận đề xuất tiếp theo.";
   }
+  summary.hidden = false;
 }
 
 // Chép phương án vào biểu mẫu để dự báo lại đúng theo phương án đó.
